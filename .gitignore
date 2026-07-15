@@ -1,0 +1,14 @@
+temp/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.redassay/
+.DS_Store
+*.egg-info/
+dist/
+build/
+.coverage
+htmlcov/
+.pytest_cache/
