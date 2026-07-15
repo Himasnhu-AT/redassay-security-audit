@@ -1,0 +1,16 @@
+{
+  "name": "redassay-security",
+  "description": "Audit a codebase for vulnerabilities, triage them on a local review board, and apply the fixes you approve.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Himanshu"
+  },
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "sast",
+    "vulnerability",
+    "audit",
+    "appsec"
+  ]
+}
