@@ -1,0 +1,289 @@
+{
+  "pack": "crypto",
+  "defaults": {
+    "owasp": [
+      "A02:2021 Cryptographic Failures"
+    ],
+    "tags": [
+      "crypto"
+    ]
+  },
+  "rules": [
+    {
+      "id": "crypto.weak-hash-password",
+      "title": "Password hashed with a fast digest",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "php",
+        "ruby",
+        "go",
+        "csharp"
+      ],
+      "pattern": "(md5|sha1|sha256|sha512)\\s*\\(",
+      "ignore_case": true,
+      "nearby": "password|passwd|pwd|secret|credential",
+      "nearby_window": 3,
+      "description": "General-purpose digests are built to be fast, which is exactly wrong for passwords - a modern GPU tries billions of candidates per second.",
+      "remediation": "Use argon2id, scrypt or bcrypt with a per-password salt and a tuned work factor.",
+      "cwe": [
+        "CWE-916"
+      ]
+    },
+    {
+      "id": "crypto.md5-sha1-usage",
+      "title": "MD5 or SHA-1 used for integrity or signing",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "php",
+        "ruby",
+        "go",
+        "csharp"
+      ],
+      "pattern": "\\b(hashlib\\.(md5|sha1)|MD5|SHA-?1)\\b|createHash\\s*\\(\\s*[\\\"'](md5|sha1)[\\\"']",
+      "not_pattern": "etag|cache|checksum|fingerprint|dedup|content_hash|#\\s*nosec",
+      "description": "MD5 and SHA-1 both have practical collision attacks; neither is acceptable where collision resistance matters.",
+      "remediation": "Use SHA-256 or better. If this is a non-security checksum, say so in a comment and suppress the rule.",
+      "cwe": [
+        "CWE-327"
+      ]
+    },
+    {
+      "id": "crypto.ecb-mode",
+      "title": "Block cipher in ECB mode",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "php",
+        "go",
+        "csharp",
+        "ruby"
+      ],
+      "pattern": "(MODE_ECB|[\\\"']AES/ECB|[\\\"']DES/ECB|[\\\"']aes-\\d+-ecb|CipherMode\\.ECB|ECB\\b)",
+      "description": "ECB encrypts identical plaintext blocks to identical ciphertext blocks, so structure leaks straight through the encryption.",
+      "remediation": "Use an authenticated mode: AES-GCM or ChaCha20-Poly1305, with a unique nonce per message.",
+      "cwe": [
+        "CWE-327"
+      ]
+    },
+    {
+      "id": "crypto.static-iv",
+      "title": "Hardcoded or zero IV / nonce",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "php",
+        "go",
+        "csharp",
+        "ruby"
+      ],
+      "pattern": "\\b(iv|IV|nonce|NONCE)\\s*[:=]\\s*([\\\"'][^\\\"']{8,}[\\\"']|b[\\\"'][^\\\"']+[\\\"']|(bytes|Buffer\\.alloc)\\s*\\(\\s*\\d+\\s*\\)|new\\s+byte\\s*\\[\\s*\\d+\\s*\\])",
+      "description": "Reusing an IV under the same key destroys the security of CBC and is catastrophic for CTR and GCM - it leaks plaintext XOR and, for GCM, the authentication key.",
+      "remediation": "Generate a fresh random IV per message with a CSPRNG and store it alongside the ciphertext.",
+      "cwe": [
+        "CWE-329"
+      ]
+    },
+    {
+      "id": "crypto.weak-random-security",
+      "title": "Non-cryptographic RNG used for a secret",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "php",
+        "go",
+        "ruby",
+        "csharp"
+      ],
+      "pattern": "(Math\\.random\\s*\\(|random\\.(random|randint|choice|randrange|sample)\\s*\\(|new\\s+Random\\s*\\(|mt_rand\\s*\\(|rand\\s*\\()",
+      "nearby": "token|secret|password|passwd|key|nonce|salt|otp|session|csrf|reset|api_?key|uuid",
+      "nearby_window": 4,
+      "description": "These PRNGs are predictable from a handful of outputs. A token generated from one can be reproduced by an attacker.",
+      "remediation": "Use secrets.token_urlsafe() (Python), crypto.randomBytes() (Node), SecureRandom (Java), crypto/rand (Go).",
+      "cwe": [
+        "CWE-338"
+      ]
+    },
+    {
+      "id": "crypto.tls-verify-disabled",
+      "title": "TLS certificate verification disabled",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "go",
+        "java",
+        "php",
+        "ruby",
+        "csharp",
+        "shell"
+      ],
+      "pattern": "(verify\\s*=\\s*False|InsecureSkipVerify\\s*:\\s*true|rejectUnauthorized\\s*:\\s*false|NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*[\\\"']?0|CURLOPT_SSL_VERIFYPEER\\s*,\\s*(false|0)|VERIFY_NONE|curl\\s+(-k|--insecure)\\b|ServicePointManager\\.ServerCertificateValidationCallback)",
+      "description": "Without verification, any network position can present its own certificate and read or rewrite the traffic. TLS with verification off is plaintext with extra CPU cost.",
+      "remediation": "Verify certificates. For an internal CA, add the CA bundle rather than disabling the check.",
+      "cwe": [
+        "CWE-295"
+      ]
+    },
+    {
+      "id": "crypto.weak-tls-version",
+      "title": "Obsolete TLS/SSL protocol version pinned",
+      "severity": "medium",
+      "confidence": "high",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "csharp",
+        "ruby",
+        "php",
+        "yaml",
+        "ini",
+        "nginx",
+        "apache"
+      ],
+      "pattern": "(SSLv2|SSLv3|TLSv1(\\.0|\\.1)?(?![\\.\\d])|PROTOCOL_TLSv1(_1)?\\b|SSLv23|ssl_protocols[^;]*TLSv1[^.2-3])",
+      "description": "TLS below 1.2 has known attacks (POODLE, BEAST, downgrade) and is rejected by current clients.",
+      "remediation": "Require TLS 1.2 as a floor, 1.3 where available.",
+      "cwe": [
+        "CWE-327"
+      ]
+    },
+    {
+      "id": "crypto.des-rc4-3des",
+      "title": "Broken cipher (DES, 3DES, RC4, Blowfish)",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "csharp",
+        "ruby",
+        "php"
+      ],
+      "pattern": "\\b(DES(?!C)|3DES|TripleDES|DESede|RC4|ARCFOUR|Blowfish)\\b",
+      "description": "These ciphers have small block sizes or practical key-recovery attacks and are no longer considered secure.",
+      "remediation": "Use AES-256-GCM or ChaCha20-Poly1305.",
+      "cwe": [
+        "CWE-327"
+      ]
+    },
+    {
+      "id": "crypto.jwt-none-alg",
+      "title": "JWT verification accepting alg=none or unverified decode",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "ruby",
+        "php"
+      ],
+      "pattern": "(algorithms\\s*[:=]\\s*\\[?\\s*[\\\"']none[\\\"']|verify\\s*[:=]\\s*False|verify_signature[\\\"']?\\s*:\\s*False|jwt\\.decode\\s*\\([^)]*verify\\s*=\\s*False|jwt\\.decode\\s*\\(\\s*\\w+\\s*\\)\\s*$|decode\\s*\\([^)]*\\{\\s*\\}\\s*\\)|jsonwebtoken\\.decode\\s*\\()",
+      "description": "Decoding a JWT without verifying its signature means the client decides what the claims say - including which user they are.",
+      "remediation": "Always verify with an explicit algorithm allowlist and the correct key. jwt.decode(token, key, algorithms=['RS256']).",
+      "cwe": [
+        "CWE-347"
+      ]
+    },
+    {
+      "id": "crypto.constant-time-compare",
+      "title": "Secret compared with == instead of a constant-time check",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "ruby",
+        "php",
+        "csharp"
+      ],
+      "pattern": "(==|===|!=|!==|\\.equals\\s*\\(|strcmp\\s*\\()",
+      "nearby": "\\b(hmac|signature|mac|digest|token|api_?key|secret)\\b",
+      "nearby_window": 2,
+      "not_pattern": "compare_digest|timingSafeEqual|MessageDigest\\.isEqual|subtle\\.|hash_equals|len\\(|\\.length",
+      "description": "A short-circuiting comparison leaks how many leading bytes matched, which is enough to forge a signature byte by byte over many requests.",
+      "remediation": "Use hmac.compare_digest (Python), crypto.timingSafeEqual (Node), hash_equals (PHP), subtle.ConstantTimeCompare (Go).",
+      "cwe": [
+        "CWE-208"
+      ]
+    },
+    {
+      "id": "crypto.small-rsa-key",
+      "title": "RSA/DSA key smaller than 2048 bits",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "csharp",
+        "shell"
+      ],
+      "pattern": "(key_size\\s*=\\s*(512|1024)|modulusLength\\s*:\\s*(512|1024)|initialize\\s*\\(\\s*(512|1024)\\s*\\)|rsa:(512|1024)|-b\\s+(512|1024)\\b)",
+      "description": "1024-bit RSA is below every current guideline and considered factorable by a well-resourced adversary.",
+      "remediation": "Use 3072-bit RSA, or move to Ed25519/ECDSA P-256.",
+      "cwe": [
+        "CWE-326"
+      ]
+    },
+    {
+      "id": "crypto.hardcoded-salt",
+      "title": "Hardcoded salt for key derivation",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "php",
+        "ruby"
+      ],
+      "pattern": "\\bsalt\\s*[:=]\\s*[\\\"'b][^\\\"']{4,}[\\\"']",
+      "not_pattern": "salt\\s*[:=]\\s*(os\\.urandom|secrets\\.|crypto\\.randomBytes|SecureRandom|bcrypt\\.gensalt)",
+      "description": "A shared salt means identical passwords produce identical hashes, which makes precomputation worthwhile again.",
+      "remediation": "Generate a random salt per record and store it with the hash.",
+      "cwe": [
+        "CWE-760"
+      ]
+    }
+  ]
+}
