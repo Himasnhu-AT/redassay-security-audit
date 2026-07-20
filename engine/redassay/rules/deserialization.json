@@ -1,0 +1,138 @@
+{
+  "pack": "deserialization",
+  "defaults": {
+    "owasp": [
+      "A08:2021 Software and Data Integrity Failures"
+    ],
+    "tags": [
+      "deserialization"
+    ],
+    "cwe": [
+      "CWE-502"
+    ]
+  },
+  "rules": [
+    {
+      "id": "deser.python-pickle",
+      "title": "pickle/marshal/shelve load on external data",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "python"
+      ],
+      "pattern": "\\b(pickle|cPickle|dill|marshal|shelve)\\.(load|loads)\\s*\\(",
+      "description": "Unpickling executes __reduce__ on the incoming object graph. A crafted payload is arbitrary code execution, by design of the format.",
+      "remediation": "Use JSON for data interchange. If you need pickle, sign the payload with HMAC and verify before loading."
+    },
+    {
+      "id": "deser.yaml-unsafe-load",
+      "title": "yaml.load() without SafeLoader",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "python"
+      ],
+      "pattern": "yaml\\.(load|unsafe_load|full_load)\\s*\\(",
+      "not_pattern": "Loader\\s*=\\s*(yaml\\.)?(SafeLoader|CSafeLoader)|yaml\\.safe_load",
+      "description": "PyYAML's default loader constructs arbitrary Python objects from !!python/object tags.",
+      "remediation": "Call yaml.safe_load(), or pass Loader=yaml.SafeLoader explicitly."
+    },
+    {
+      "id": "deser.js-node-serialize",
+      "title": "node-serialize / funcster unserialize",
+      "severity": "critical",
+      "confidence": "high",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "(node-serialize|funcster|serialize-to-js)|\\bunserialize\\s*\\(",
+      "description": "These libraries restore functions from their source text, which is remote code execution on untrusted input.",
+      "remediation": "Use JSON.parse(). If you need richer types, use a schema-validated codec."
+    },
+    {
+      "id": "deser.php-unserialize",
+      "title": "PHP unserialize() on request data",
+      "severity": "critical",
+      "confidence": "high",
+      "languages": [
+        "php"
+      ],
+      "pattern": "\\bunserialize\\s*\\(\\s*[^)]*(\\$_(GET|POST|REQUEST|COOKIE)|\\$\\w+)",
+      "description": "unserialize() invokes magic methods on the reconstructed objects, which POP-chain gadgets turn into code execution.",
+      "remediation": "Use json_decode(). If unserialize is unavoidable, pass ['allowed_classes' => false]."
+    },
+    {
+      "id": "deser.java-readobject",
+      "title": "Java ObjectInputStream.readObject()",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "java",
+        "kotlin",
+        "scala"
+      ],
+      "pattern": "new\\s+ObjectInputStream\\s*\\(|\\.readObject\\s*\\(\\s*\\)",
+      "description": "Java deserialization gadget chains in common libraries turn readObject into arbitrary code execution.",
+      "remediation": "Use a data format (JSON/protobuf). If you must, install an ObjectInputFilter allowlist."
+    },
+    {
+      "id": "deser.dotnet-binaryformatter",
+      "title": "BinaryFormatter / LosFormatter / NetDataContractSerializer",
+      "severity": "critical",
+      "confidence": "high",
+      "languages": [
+        "csharp"
+      ],
+      "pattern": "\\b(BinaryFormatter|LosFormatter|NetDataContractSerializer|SoapFormatter|ObjectStateFormatter)\\b",
+      "description": "Microsoft documents BinaryFormatter as unsafe and has removed it; it is directly exploitable with public gadget chains.",
+      "remediation": "Migrate to System.Text.Json or another contract-based serializer."
+    },
+    {
+      "id": "deser.ruby-marshal",
+      "title": "Marshal.load / YAML.load in Ruby",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "ruby"
+      ],
+      "pattern": "Marshal\\.load\\s*\\(|YAML\\.load\\s*\\(",
+      "not_pattern": "YAML\\.safe_load|safe_load",
+      "description": "Both reconstruct arbitrary Ruby objects and are exploitable with known gadget chains.",
+      "remediation": "Use JSON.parse or YAML.safe_load with an explicit permitted_classes list."
+    },
+    {
+      "id": "deser.xml-external-entity",
+      "title": "XML parser with external entities enabled",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "java",
+        "csharp",
+        "php",
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "(resolve_entities\\s*=\\s*True|XMLParser\\s*\\(\\s*\\)|setFeature\\s*\\(\\s*[\\\"']http://xml\\.org/sax/features/external-general-entities[\\\"']\\s*,\\s*true|libxml_disable_entity_loader\\s*\\(\\s*false|noent\\s*[:=]\\s*(True|true))",
+      "description": "An XML parser that resolves external entities will read local files and make outbound requests on the attacker's behalf (XXE).",
+      "remediation": "Disable DTD processing and external entity resolution. In Python use defusedxml.",
+      "cwe": [
+        "CWE-611"
+      ]
+    },
+    {
+      "id": "deser.jackson-default-typing",
+      "title": "Jackson polymorphic default typing enabled",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "java",
+        "kotlin"
+      ],
+      "pattern": "enableDefaultTyping\\s*\\(|activateDefaultTyping\\s*\\(",
+      "description": "Default typing lets the JSON payload name the class to instantiate, which is the Jackson deserialization RCE pattern.",
+      "remediation": "Use @JsonTypeInfo with an explicit, allowlisted subtype registry."
+    }
+  ]
+}
