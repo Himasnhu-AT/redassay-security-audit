@@ -1,0 +1,172 @@
+{
+  "pack": "access-control",
+  "defaults": {
+    "owasp": [
+      "A01:2021 Broken Access Control"
+    ],
+    "tags": [
+      "authz"
+    ]
+  },
+  "rules": [
+    {
+      "id": "authz.path-traversal-join",
+      "title": "Filesystem path built from request data",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "php",
+        "ruby",
+        "csharp"
+      ],
+      "pattern": "(os\\.path\\.join|path\\.join|Paths\\.get|filepath\\.Join|File\\s*\\(|open\\s*\\(|readFile(Sync)?\\s*\\(|fopen\\s*\\()",
+      "nearby": "req\\.(params|query|body)|request\\.(args|form|files|GET|POST)|\\$_(GET|POST|REQUEST)|params\\[|c\\.Param|input\\.",
+      "nearby_window": 3,
+      "not_pattern": "basename|secure_filename|realpath|resolve\\(|normalize\\(",
+      "description": "If a request-controlled segment reaches a path, ../ walks out of the intended directory and reads or writes arbitrary files.",
+      "remediation": "Resolve the final path and assert it is still inside the base directory; strip the path component with basename first.",
+      "cwe": [
+        "CWE-22"
+      ]
+    },
+    {
+      "id": "authz.zip-extractall",
+      "title": "Archive extracted without path validation",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "ruby",
+        "go"
+      ],
+      "pattern": "(extractall\\s*\\(|\\.extract\\s*\\(|TarFile\\.extract|unzip\\.Extract|new\\s+ZipInputStream)",
+      "not_pattern": "filter\\s*=\\s*[\\\"'](data|tar)[\\\"']|members\\s*=",
+      "description": "An archive entry named ../../etc/cron.d/x writes outside the destination directory (Zip Slip).",
+      "remediation": "Validate every member path resolves inside the destination. On Python 3.12+, pass filter='data'.",
+      "cwe": [
+        "CWE-22"
+      ]
+    },
+    {
+      "id": "authz.missing-authorization-check",
+      "title": "Mutating route with no authorization decorator",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "python"
+      ],
+      "pattern": "@(app|bp|blueprint|router)\\.(route|post|put|patch|delete)\\s*\\(",
+      "nearby_absent": "login_required|permission_required|requires_auth|current_user|authorize|@jwt_required|Depends\\s*\\(",
+      "nearby_window": 6,
+      "nearby": "(methods\\s*=\\s*\\[[^\\]]*(POST|PUT|PATCH|DELETE)|\\.(post|put|patch|delete)\\s*\\()",
+      "description": "A state-changing endpoint with no visible authorization check nearby. Worth confirming by hand - authorization is the one class of bug scanners cannot decide for you.",
+      "remediation": "Apply the framework's authorization decorator, and check object ownership inside the handler, not just authentication.",
+      "cwe": [
+        "CWE-862"
+      ]
+    },
+    {
+      "id": "authz.express-no-auth-mutation",
+      "title": "Express mutating route with no auth middleware",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "(app|router)\\.(post|put|patch|delete)\\s*\\(\\s*[\\\"'`][^\\\"'`]+[\\\"'`]\\s*,\\s*(async\\s*)?\\(?\\s*req",
+      "description": "The handler is registered with no middleware between the path and the handler function.",
+      "remediation": "Insert an authentication/authorization middleware argument, and verify resource ownership inside the handler.",
+      "cwe": [
+        "CWE-862"
+      ]
+    },
+    {
+      "id": "authz.idor-direct-param",
+      "title": "Record looked up by a request-supplied id with no ownership filter",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "ruby",
+        "php"
+      ],
+      "pattern": "(findById|find_by_id|get_object_or_404|\\.get\\s*\\(\\s*(pk|id)\\s*=|objects\\.get\\s*\\(\\s*id\\s*=|findByPk)\\s*\\(?",
+      "nearby": "req\\.(params|query|body)|request\\.(args|GET|POST)|params\\[",
+      "nearby_window": 3,
+      "nearby_absent": "user_?id|owner|current_user|tenant|account_id|scope",
+      "description": "Fetching by a client-supplied id without scoping to the caller is the classic insecure direct object reference.",
+      "remediation": "Scope every lookup to the authenticated principal: Model.objects.get(id=x, owner=request.user).",
+      "cwe": [
+        "CWE-639"
+      ]
+    },
+    {
+      "id": "authz.cors-wildcard-credentials",
+      "title": "CORS allows any origin together with credentials",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "go",
+        "java",
+        "php",
+        "ruby"
+      ],
+      "pattern": "(Access-Control-Allow-Origin[\\\"']?\\s*[,:]\\s*[\\\"']\\*|origin\\s*:\\s*[\\\"']\\*|CORS_ORIGIN_ALLOW_ALL\\s*=\\s*True|origins\\s*=\\s*[\\\"']\\*)",
+      "nearby": "credentials\\s*:\\s*true|Allow-Credentials|supports_credentials\\s*=\\s*True|CORS_ALLOW_CREDENTIALS",
+      "nearby_window": 6,
+      "description": "Wildcard origin plus credentials lets any site read authenticated responses on behalf of a logged-in visitor.",
+      "remediation": "Reflect only origins from an explicit allowlist when credentials are involved.",
+      "cwe": [
+        "CWE-942"
+      ]
+    },
+    {
+      "id": "authz.cors-reflect-origin",
+      "title": "CORS origin reflected from the request",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "go",
+        "php"
+      ],
+      "pattern": "Access-Control-Allow-Origin[\\\"']?\\s*[,:]\\s*(req\\.headers\\.origin|request\\.headers\\.get\\s*\\(\\s*[\\\"']Origin|\\$_SERVER\\[[\\\"']HTTP_ORIGIN)",
+      "description": "Echoing the Origin header back is equivalent to allowing every origin, while also passing the credentials check.",
+      "remediation": "Compare the Origin against an allowlist and echo it only on a match.",
+      "cwe": [
+        "CWE-942"
+      ]
+    },
+    {
+      "id": "authz.assert-for-authorization",
+      "title": "assert used to enforce a security check",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python"
+      ],
+      "pattern": "^\\s*assert\\s+.*\\b(is_admin|is_staff|is_authenticated|has_perm|can_|permission|role|owner|current_user)\\b",
+      "description": "python -O strips assert statements. A security check written as an assert disappears in an optimized deployment.",
+      "remediation": "Use an explicit if/raise.",
+      "cwe": [
+        "CWE-617"
+      ]
+    }
+  ]
+}
