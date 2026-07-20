@@ -1,0 +1,92 @@
+{
+  "pack": "ssrf",
+  "defaults": {
+    "owasp": [
+      "A10:2021 Server-Side Request Forgery"
+    ],
+    "tags": [
+      "ssrf"
+    ],
+    "cwe": [
+      "CWE-918"
+    ]
+  },
+  "rules": [
+    {
+      "id": "ssrf.http-client-dynamic-url",
+      "title": "Outbound HTTP request to a URL from the request",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "go",
+        "java",
+        "php",
+        "ruby",
+        "csharp"
+      ],
+      "pattern": "(requests\\.(get|post|put|delete|head|patch|request)|urlopen|urllib\\.request|httpx\\.(get|post|Client)|axios(\\.(get|post|put|delete))?|fetch|http\\.(get|request)|HttpClient|curl_setopt|Net::HTTP|RestClient|file_get_contents)\\s*\\(",
+      "nearby": "req\\.(params|query|body)|request\\.(args|form|GET|POST|json)|\\$_(GET|POST|REQUEST)|params\\[|input\\[|user_url|target_url|callback_url|webhook",
+      "nearby_window": 4,
+      "description": "A request-controlled URL lets an attacker aim the server at internal services: cloud metadata endpoints, admin interfaces on localhost, or the internal network generally.",
+      "remediation": "Allowlist the hosts you intend to reach, resolve the hostname and reject private/link-local addresses, and disable redirects."
+    },
+    {
+      "id": "ssrf.metadata-endpoint",
+      "title": "Cloud instance metadata address referenced",
+      "severity": "medium",
+      "confidence": "high",
+      "languages": [
+        "*"
+      ],
+      "pattern": "169\\.254\\.169\\.254|metadata\\.google\\.internal|metadata\\.azure\\.com|100\\.100\\.100\\.200",
+      "description": "The link-local metadata service hands out instance credentials to anything that can reach it. Its presence in source is worth a look, and it is the first place an SSRF gets pointed.",
+      "remediation": "Require IMDSv2 (token-bound), and block outbound access to 169.254.0.0/16 from application containers."
+    },
+    {
+      "id": "ssrf.redirect-follow-unbounded",
+      "title": "Redirects followed on an attacker-influenced request",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "go",
+        "php"
+      ],
+      "pattern": "(allow_redirects\\s*=\\s*True|follow_redirects\\s*[:=]\\s*(True|true)|CURLOPT_FOLLOWLOCATION\\s*,\\s*(true|1))",
+      "nearby": "req\\.|request\\.|\\$_(GET|POST)|user_url|target",
+      "nearby_window": 5,
+      "description": "An allowlist check on the first URL is worthless if the client then follows a 302 to an internal address.",
+      "remediation": "Disable automatic redirects and re-validate each hop."
+    },
+    {
+      "id": "ssrf.open-redirect",
+      "title": "Redirect target taken from the request",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "php",
+        "ruby",
+        "go",
+        "java"
+      ],
+      "pattern": "(redirect|Redirect|sendRedirect|res\\.redirect|header\\s*\\(\\s*[\\\"']Location)\\s*\\(?\\s*[^)]*(req\\.(query|params|body)|request\\.(args|GET|POST)|\\$_(GET|POST|REQUEST)|params\\[)",
+      "not_pattern": "url_for|reverse\\(|allowlist|is_safe_url",
+      "description": "An open redirect turns your domain into a credible starting point for a phishing link, and frequently bypasses OAuth redirect_uri checks.",
+      "remediation": "Redirect only to relative paths, or to an allowlist of absolute URLs.",
+      "cwe": [
+        "CWE-601"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    }
+  ]
+}
