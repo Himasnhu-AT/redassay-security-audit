@@ -1,0 +1,352 @@
+{
+  "pack": "injection",
+  "defaults": {
+    "owasp": [
+      "A03:2021 Injection"
+    ],
+    "tags": [
+      "injection"
+    ]
+  },
+  "rules": [
+    {
+      "id": "sql.string-concat-query",
+      "title": "SQL query built by string concatenation",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "ruby",
+        "php",
+        "java",
+        "go",
+        "csharp",
+        "kotlin",
+        "scala"
+      ],
+      "pattern": "\\b(select|insert\\s+into|update|delete\\s+from)\\b[^;\"'`]*?[\"'`]\\s*(\\+|\\.|%|\\|\\|)\\s*",
+      "not_pattern": "(\\?|:\\w+|\\$\\d|%s|%\\(|@\\w+)\\s*[\"'`]\\s*$",
+      "description": "A SQL statement is assembled by concatenating a string literal with another expression. If any part of that expression reaches the request, an attacker controls the query's structure, not just its data.",
+      "remediation": "Use parameterized queries (placeholders bound by the driver). Never interpolate into SQL, including for identifiers - allowlist those instead.",
+      "cwe": [
+        "CWE-89"
+      ],
+      "references": [
+        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
+      ],
+      "ignore_case": true
+    },
+    {
+      "id": "sql.fstring-query",
+      "title": "SQL query built with an f-string or .format()",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "python"
+      ],
+      "pattern": "(execute|executemany|raw|cursor\\.\\w+|text)\\s*\\(\\s*f[\"']|[\"'].*\\b(select|insert|update|delete)\\b.*[\"']\\s*\\.format\\s*\\(",
+      "description": "f-strings and .format() interpolate directly into the SQL text. The database receives whatever the user typed as query syntax.",
+      "remediation": "Pass parameters as the second argument: cursor.execute('SELECT * FROM t WHERE id = %s', (user_id,)).",
+      "cwe": [
+        "CWE-89"
+      ],
+      "ignore_case": true
+    },
+    {
+      "id": "sql.django-raw-interpolation",
+      "title": "Django raw()/extra() with interpolated SQL",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "python"
+      ],
+      "pattern": "\\.(raw|extra)\\s*\\(\\s*(f[\"']|[\"'][^\"']*[\"']\\s*(%|\\+|\\.format))",
+      "description": "Django's raw() and extra() do not escape interpolated values; only the params= argument is bound safely.",
+      "remediation": "Use Model.objects.raw('... WHERE id = %s', [value]) and pass values through params.",
+      "cwe": [
+        "CWE-89"
+      ]
+    },
+    {
+      "id": "sql.knex-sequelize-raw",
+      "title": "Raw SQL helper called with a template literal",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "\\.(raw|query)\\s*\\(\\s*`[^`]*\\$\\{",
+      "not_pattern": "sql`|sql\\.raw|escapeId",
+      "description": "A template literal with ${} inside a raw SQL helper interpolates before the driver sees it.",
+      "remediation": "Use bindings: knex.raw('select * from t where id = ?', [id]) or sequelize replacements.",
+      "cwe": [
+        "CWE-89"
+      ]
+    },
+    {
+      "id": "cmd.shell-true",
+      "title": "subprocess call with shell=True",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python"
+      ],
+      "pattern": "\\b(subprocess\\.(run|call|check_call|check_output|Popen)|os\\.popen)\\s*\\(",
+      "nearby": "shell\\s*=\\s*True|os\\.popen",
+      "nearby_window": 3,
+      "description": "shell=True hands the argument to /bin/sh, so shell metacharacters in any interpolated value become commands.",
+      "remediation": "Pass a list of arguments and leave shell=False. If you need a pipeline, build it with subprocess pipes rather than a shell string.",
+      "cwe": [
+        "CWE-78"
+      ]
+    },
+    {
+      "id": "cmd.os-system",
+      "title": "os.system() call",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python"
+      ],
+      "pattern": "\\bos\\.system\\s*\\(",
+      "not_pattern": "os\\.system\\s*\\(\\s*[\"'][^\"'$`;|&]*[\"']\\s*\\)",
+      "description": "os.system() always runs through a shell and returns only an exit code. Any interpolated value is shell syntax.",
+      "remediation": "Replace with subprocess.run([...], check=True).",
+      "cwe": [
+        "CWE-78"
+      ]
+    },
+    {
+      "id": "cmd.node-exec",
+      "title": "child_process.exec with an interpolated command",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "\\b(child_process\\.)?(exec|execSync)\\s*\\(\\s*(`[^`]*\\$\\{|[\"'][^\"']*[\"']\\s*\\+|\\w+\\s*\\+)",
+      "description": "exec() spawns a shell. Template interpolation into it is command injection.",
+      "remediation": "Use execFile()/spawn() with an argument array, which never involves a shell.",
+      "cwe": [
+        "CWE-78"
+      ]
+    },
+    {
+      "id": "cmd.ruby-backtick",
+      "title": "Shell interpolation in Ruby backticks or system()",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "ruby"
+      ],
+      "pattern": "(`[^`]*#\\{|\\b(system|exec|spawn)\\s*\\(?\\s*\"[^\"]*#\\{)",
+      "description": "Ruby interpolates #{} before the shell runs the string.",
+      "remediation": "Use the multi-argument form: system('git', 'checkout', branch).",
+      "cwe": [
+        "CWE-78"
+      ]
+    },
+    {
+      "id": "cmd.php-exec",
+      "title": "PHP shell execution with a variable",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "php"
+      ],
+      "pattern": "\\b(exec|shell_exec|system|passthru|popen|proc_open)\\s*\\(\\s*[^)]*\\$",
+      "description": "A PHP variable reaches a shell execution function.",
+      "remediation": "Avoid shell execution. If unavoidable, use escapeshellarg() on every interpolated value.",
+      "cwe": [
+        "CWE-78"
+      ]
+    },
+    {
+      "id": "code.python-eval-exec",
+      "title": "eval()/exec() on a non-literal expression",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "python"
+      ],
+      "pattern": "(?<![\\w.])(eval|exec)\\s*\\(",
+      "not_pattern": "(?<![\\w.])(eval|exec)\\s*\\(\\s*(compile\\s*\\(|[\"'][^\"']*[\"']\\s*\\))|\\.eval\\(|def (eval|exec)",
+      "description": "eval() and exec() execute arbitrary Python. Reaching them with request data is remote code execution.",
+      "remediation": "Use ast.literal_eval() for data, a dispatch dict for behaviour, or json.loads() for structured input.",
+      "cwe": [
+        "CWE-95"
+      ]
+    },
+    {
+      "id": "code.js-eval",
+      "title": "eval() or Function() constructor on dynamic input",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript",
+        "vue",
+        "svelte",
+        "html"
+      ],
+      "pattern": "(?<![\\w.$])(eval\\s*\\(|new\\s+Function\\s*\\(|setTimeout\\s*\\(\\s*[\"'`]|setInterval\\s*\\(\\s*[\"'`])",
+      "not_pattern": "//\\s*eval|eval\\s*\\(\\s*\\)",
+      "description": "eval() and the Function constructor compile strings into code in the caller's scope.",
+      "remediation": "Parse data with JSON.parse(). For dynamic dispatch use an object map keyed by an allowlisted name.",
+      "cwe": [
+        "CWE-95"
+      ]
+    },
+    {
+      "id": "code.node-vm",
+      "title": "vm module used as a sandbox",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "\\bvm\\.(runInThisContext|runInNewContext|runInContext|compileFunction)\\s*\\(",
+      "description": "Node's vm module is not a security boundary - escaping it via constructor chains is a documented, trivial technique.",
+      "remediation": "Run untrusted code in a separate process with dropped privileges, or not at all.",
+      "cwe": [
+        "CWE-94"
+      ],
+      "references": [
+        "https://nodejs.org/api/vm.html#vm-executing-javascript"
+      ]
+    },
+    {
+      "id": "code.php-eval-include",
+      "title": "PHP eval() or dynamic include with a variable",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "php"
+      ],
+      "pattern": "\\b(eval|assert|create_function|preg_replace)\\s*\\(\\s*[^)]*\\$|\\b(include|require)(_once)?\\s*\\(?\\s*\\$",
+      "description": "Dynamic include and eval turn a controllable string into executed PHP - the classic path to remote code execution and local file inclusion.",
+      "remediation": "Map user input to a fixed allowlist of file paths. Never eval.",
+      "cwe": [
+        "CWE-95",
+        "CWE-98"
+      ]
+    },
+    {
+      "id": "inject.ssti-render-string",
+      "title": "Template rendered from a string built at runtime",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "python"
+      ],
+      "pattern": "render_template_string\\s*\\(\\s*(f[\"']|[^)]*(\\+|%|\\.format)\\s*)",
+      "description": "Jinja2 evaluates the template source. A user-controlled template is server-side template injection, which reaches Python objects and therefore RCE.",
+      "remediation": "Render a fixed template file and pass user data as a context variable.",
+      "cwe": [
+        "CWE-1336"
+      ]
+    },
+    {
+      "id": "inject.nosql-where",
+      "title": "MongoDB $where or JS evaluation clause",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python"
+      ],
+      "pattern": "[\"']\\$where[\"']\\s*:|\\$where\\s*:",
+      "description": "$where evaluates JavaScript on the database server against every document.",
+      "remediation": "Express the condition with standard query operators. Disable server-side JS on the mongod.",
+      "cwe": [
+        "CWE-943"
+      ]
+    },
+    {
+      "id": "inject.nosql-operator-injection",
+      "title": "Request object passed straight into a query filter",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "\\.(find|findOne|findOneAndUpdate|updateOne|updateMany|deleteOne|deleteMany|count)\\s*\\(\\s*(req\\.(body|query|params)|\\{[^}]*:\\s*req\\.(body|query|params)\\.\\w+)",
+      "description": "If the request body is used as a filter, a client can send {\"$ne\": null} where a string was expected and match every document - the standard NoSQL auth bypass.",
+      "remediation": "Cast and validate each field before it reaches the query: String(req.body.user).",
+      "cwe": [
+        "CWE-943"
+      ]
+    },
+    {
+      "id": "inject.ldap-filter",
+      "title": "LDAP filter built by concatenation",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "java",
+        "javascript",
+        "typescript",
+        "csharp",
+        "php"
+      ],
+      "pattern": "[\"'`]\\s*\\(\\s*[&|]?\\s*\\(?\\s*(uid|cn|sAMAccountName|mail|objectClass)\\s*=[^\"'`]*[\"'`]\\s*(\\+|%|\\.format|\\$\\{)",
+      "description": "Unescaped input in an LDAP filter lets an attacker rewrite the filter, typically to *)(uid=* for an authentication bypass.",
+      "remediation": "Escape with the platform's LDAP filter encoder before interpolating.",
+      "cwe": [
+        "CWE-90"
+      ]
+    },
+    {
+      "id": "inject.xpath-concat",
+      "title": "XPath expression built by concatenation",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "java",
+        "javascript",
+        "typescript",
+        "csharp",
+        "php"
+      ],
+      "pattern": "(xpath|selectNodes|selectSingleNode|evaluate)\\s*\\(\\s*[\"'`][^\"'`]*[\"'`]\\s*(\\+|%|\\.format|\\$\\{)",
+      "description": "Concatenated XPath allows the same class of logic rewriting as SQL injection.",
+      "remediation": "Use variable binding via XPathVariableResolver or an equivalent.",
+      "cwe": [
+        "CWE-643"
+      ]
+    },
+    {
+      "id": "inject.log-forging",
+      "title": "Unsanitized input written to a log line",
+      "severity": "low",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "java",
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "(log(ger)?\\.(info|debug|warn|warning|error))\\s*\\(\\s*(f[\"']|[\"'`][^\"'`]*[\"'`]\\s*(\\+|%|\\.format|\\$\\{))",
+      "nearby": "req\\.|request\\.|params|user_input|argv",
+      "nearby_window": 5,
+      "description": "Newlines in user input let an attacker inject fake log entries, which breaks log-based investigation.",
+      "remediation": "Log with structured fields rather than interpolation, and strip CR/LF from user-supplied values.",
+      "cwe": [
+        "CWE-117"
+      ],
+      "tags": [
+        "injection",
+        "logging"
+      ]
+    }
+  ]
+}
