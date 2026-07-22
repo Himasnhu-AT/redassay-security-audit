@@ -58,4 +58,4 @@ def _load_builtin() -> None:
     if _loaded:
         return
     _loaded = True
-    from . import pattern, secrets, python_ast, javascript, deps, configs, crypto  # noqa: F401
+    from . import pattern, secrets, python_ast, javascript, deps, configs, cicd  # noqa: F401
