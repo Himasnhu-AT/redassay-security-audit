@@ -1,0 +1,7 @@
+# redassay scanning redassay finds its own rule text. The rule packs and the
+# scanner modules are full of vulnerability patterns by construction - that is
+# what they are - so they are excluded from self-scans.
+engine/redassay/rules/
+engine/redassay/scanners/
+engine/redassay/data/
+fixtures/
