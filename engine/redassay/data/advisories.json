@@ -1,0 +1,475 @@
+{
+  "updated": "2026-07-22",
+  "source": "curated from GHSA and NVD",
+  "note": "Offline snapshot. redassay never phones home during a scan; refresh this file deliberately.",
+  "advisories": [
+    {
+      "ecosystem": "npm",
+      "package": "lodash",
+      "vulnerable": "<4.17.21",
+      "severity": "high",
+      "id": "GHSA-35jh-r3h4-6jhm",
+      "title": "Command injection via template and prototype pollution in lodash",
+      "description": "Several lodash releases before 4.17.21 allow prototype pollution through _.zipObjectDeep and command injection through _.template."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "minimist",
+      "vulnerable": "<1.2.6",
+      "severity": "medium",
+      "id": "GHSA-xvch-5gv4-984h",
+      "title": "Prototype pollution in minimist",
+      "description": "minimist before 1.2.6 allows an argument named __proto__ to alter Object.prototype."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "axios",
+      "vulnerable": "<1.6.0",
+      "severity": "high",
+      "id": "GHSA-wf5p-g6vw-rhxx",
+      "title": "CSRF and SSRF in axios",
+      "description": "axios before 1.6.0 leaks the XSRF-TOKEN to third-party hosts and follows redirects to internal addresses."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "axios",
+      "vulnerable": "<0.21.2",
+      "severity": "high",
+      "id": "GHSA-4w2v-q235-vp99",
+      "title": "SSRF via redirect in axios",
+      "description": "axios before 0.21.2 follows redirects without re-checking the destination."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "jquery",
+      "vulnerable": "<3.5.0",
+      "severity": "medium",
+      "id": "GHSA-gxr4-xjj5-5px2",
+      "title": "XSS in jQuery htmlPrefilter",
+      "description": "jQuery before 3.5.0 can execute script from HTML passed to DOM manipulation methods."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "express",
+      "vulnerable": "<4.19.2",
+      "severity": "medium",
+      "id": "GHSA-rv95-896h-c2vc",
+      "title": "Open redirect in express response.redirect",
+      "description": "express before 4.19.2 mishandles certain location values."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "serialize-javascript",
+      "vulnerable": "<3.1.0",
+      "severity": "high",
+      "id": "GHSA-hxcc-f52p-wc94",
+      "title": "XSS via unsafe serialization",
+      "description": "serialize-javascript before 3.1.0 does not escape all payloads."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "node-fetch",
+      "vulnerable": "<2.6.7",
+      "severity": "medium",
+      "id": "GHSA-r683-j2x4-v87g",
+      "title": "Header leak on cross-host redirect",
+      "description": "node-fetch before 2.6.7 forwards the Authorization header across hosts."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "semver",
+      "vulnerable": "<7.5.2",
+      "severity": "medium",
+      "id": "GHSA-c2qf-rxjj-qqgw",
+      "title": "ReDoS in semver range parsing",
+      "description": "semver before 7.5.2 is vulnerable to regular expression denial of service."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "ws",
+      "vulnerable": "<7.4.6",
+      "severity": "high",
+      "id": "GHSA-6fc8-4gx4-v693",
+      "title": "ReDoS in ws header parsing",
+      "description": "ws before 7.4.6 can be stalled by a crafted Sec-WebSocket-Protocol header."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "tar",
+      "vulnerable": "<6.1.9",
+      "severity": "high",
+      "id": "GHSA-3jfq-g458-7qm9",
+      "title": "Arbitrary file write in tar",
+      "description": "node-tar before 6.1.9 can write outside the extraction directory."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "handlebars",
+      "vulnerable": "<4.7.7",
+      "severity": "critical",
+      "id": "GHSA-f2jv-r9rf-7988",
+      "title": "Prototype pollution leading to RCE in handlebars",
+      "description": "handlebars before 4.7.7 allows RCE when compiling templates from untrusted input."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "marked",
+      "vulnerable": "<4.0.10",
+      "severity": "medium",
+      "id": "GHSA-rrrm-qjm4-v8hf",
+      "title": "ReDoS in marked",
+      "description": "marked before 4.0.10 is vulnerable to regular expression denial of service."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "json5",
+      "vulnerable": "<2.2.2",
+      "severity": "high",
+      "id": "GHSA-9c47-m6qq-7p4h",
+      "title": "Prototype pollution in json5",
+      "description": "json5 before 2.2.2 allows __proto__ keys to reach Object.prototype."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "jsonwebtoken",
+      "vulnerable": "<9.0.0",
+      "severity": "high",
+      "id": "GHSA-27h2-hvpr-p74q",
+      "title": "Signature verification bypass in jsonwebtoken",
+      "description": "jsonwebtoken before 9.0.0 accepts keys of an unexpected type, allowing verification bypass."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "moment",
+      "vulnerable": "<2.29.4",
+      "severity": "high",
+      "id": "GHSA-8hfj-j24r-96c4",
+      "title": "Path traversal in moment locale loading",
+      "description": "moment before 2.29.4 allows directory traversal when a locale name is user supplied."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "follow-redirects",
+      "vulnerable": "<1.15.4",
+      "severity": "medium",
+      "id": "GHSA-jchw-25xp-jwwc",
+      "title": "Proxy-Authorization header leak",
+      "description": "follow-redirects before 1.15.4 forwards credentials across hosts."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "braces",
+      "vulnerable": "<3.0.3",
+      "severity": "high",
+      "id": "GHSA-grv7-fg5c-xmjg",
+      "title": "Uncontrolled resource consumption in braces",
+      "description": "braces before 3.0.3 can be made to allocate unbounded memory."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "qs",
+      "vulnerable": "<6.10.3",
+      "severity": "high",
+      "id": "GHSA-hrpp-h998-j3pp",
+      "title": "Prototype pollution in qs",
+      "description": "qs before 6.10.3 allows __proto__ via a crafted query string."
+    },
+    {
+      "ecosystem": "npm",
+      "package": "shell-quote",
+      "vulnerable": "<1.7.3",
+      "severity": "critical",
+      "id": "GHSA-g4rg-993r-mgx7",
+      "title": "Command injection in shell-quote",
+      "description": "shell-quote before 1.7.3 fails to quote some payloads, allowing injection."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "django",
+      "vulnerable": "<3.2.25",
+      "severity": "high",
+      "id": "GHSA-xxj9-3542-jqg2",
+      "title": "Multiple issues in Django 3.2",
+      "description": "Django before 3.2.25 contains fixes for denial of service and SQL injection in specific query paths."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "django",
+      "vulnerable": "<4.2.11",
+      "severity": "high",
+      "id": "CVE-2024-27351",
+      "title": "ReDoS in django.utils.text.Truncator",
+      "description": "Django before 4.2.11 is vulnerable to a regular expression denial of service."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "flask",
+      "vulnerable": "<2.2.5",
+      "severity": "high",
+      "id": "GHSA-m2qf-hxjv-5gpq",
+      "title": "Session cookie leak in Flask",
+      "description": "Flask before 2.2.5 may send a cached session cookie to the wrong client behind a proxy."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "requests",
+      "vulnerable": "<2.31.0",
+      "severity": "medium",
+      "id": "GHSA-j8r2-6x86-q33q",
+      "title": "Proxy-Authorization leak on redirect",
+      "description": "requests before 2.31.0 forwards the Proxy-Authorization header across redirects."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "requests",
+      "vulnerable": "<2.32.0",
+      "severity": "medium",
+      "id": "GHSA-9wx4-h78v-vm56",
+      "title": "Certificate verification bypass",
+      "description": "requests before 2.32.0 may not honour verify=False on the first request in a session."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "urllib3",
+      "vulnerable": "<1.26.18",
+      "severity": "medium",
+      "id": "GHSA-g4mx-q9vg-27p4",
+      "title": "Request body leak on redirect",
+      "description": "urllib3 before 1.26.18 keeps the request body across a 303 redirect."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "urllib3",
+      "vulnerable": "<2.0.7",
+      "severity": "medium",
+      "id": "GHSA-v845-jxx5-vc9f",
+      "title": "Cookie header leak on cross-origin redirect",
+      "description": "urllib3 before 2.0.7 forwards the Cookie header to a different host."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "pyyaml",
+      "vulnerable": "<5.4",
+      "severity": "critical",
+      "id": "CVE-2020-14343",
+      "title": "Arbitrary code execution in PyYAML full_load",
+      "description": "PyYAML before 5.4 allows code execution when loading untrusted YAML with the default loader."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "jinja2",
+      "vulnerable": "<3.1.3",
+      "severity": "medium",
+      "id": "GHSA-h5c8-rqwp-cp95",
+      "title": "XSS via xmlattr filter",
+      "description": "Jinja2 before 3.1.3 does not escape certain attribute names."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "werkzeug",
+      "vulnerable": "<2.2.3",
+      "severity": "high",
+      "id": "GHSA-xg9f-g7g7-2323",
+      "title": "Denial of service in multipart parsing",
+      "description": "Werkzeug before 2.2.3 can be exhausted by a crafted multipart body."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "werkzeug",
+      "vulnerable": "<3.0.3",
+      "severity": "high",
+      "id": "GHSA-2g68-c3qc-8985",
+      "title": "Debugger PIN bypass on Windows",
+      "description": "Werkzeug before 3.0.3 allows the debugger to be reached in some deployments."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "cryptography",
+      "vulnerable": "<42.0.4",
+      "severity": "high",
+      "id": "GHSA-6vqw-3v5j-54x4",
+      "title": "NULL dereference in PKCS7 handling",
+      "description": "cryptography before 42.0.4 can crash on a crafted certificate."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "pillow",
+      "vulnerable": "<10.0.1",
+      "severity": "critical",
+      "id": "CVE-2023-4863",
+      "title": "Heap buffer overflow in libwebp",
+      "description": "Pillow bundling libwebp before 10.0.1 is vulnerable to an exploitable heap overflow."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "paramiko",
+      "vulnerable": "<2.10.1",
+      "severity": "high",
+      "id": "CVE-2022-24302",
+      "title": "Race condition in private key file permissions",
+      "description": "paramiko before 2.10.1 writes private keys before restricting their permissions."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "lxml",
+      "vulnerable": "<4.9.1",
+      "severity": "high",
+      "id": "CVE-2022-2309",
+      "title": "NULL dereference in lxml",
+      "description": "lxml before 4.9.1 can crash when parsing crafted input."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "gunicorn",
+      "vulnerable": "<22.0.0",
+      "severity": "high",
+      "id": "CVE-2024-1135",
+      "title": "HTTP request smuggling in gunicorn",
+      "description": "gunicorn before 22.0.0 mishandles Transfer-Encoding headers."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "aiohttp",
+      "vulnerable": "<3.9.4",
+      "severity": "high",
+      "id": "CVE-2024-27306",
+      "title": "XSS in aiohttp static file handler",
+      "description": "aiohttp before 3.9.4 reflects unescaped paths in directory listings."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "sqlparse",
+      "vulnerable": "<0.5.0",
+      "severity": "medium",
+      "id": "GHSA-2m57-hf25-phgg",
+      "title": "ReDoS in sqlparse",
+      "description": "sqlparse before 0.5.0 can be stalled by deeply nested expressions."
+    },
+    {
+      "ecosystem": "pypi",
+      "package": "setuptools",
+      "vulnerable": "<65.5.1",
+      "severity": "medium",
+      "id": "CVE-2022-40897",
+      "title": "ReDoS in package index parsing",
+      "description": "setuptools before 65.5.1 is vulnerable to regular expression denial of service."
+    },
+    {
+      "ecosystem": "maven",
+      "package": "org.apache.logging.log4j:log4j-core",
+      "vulnerable": "<2.17.1",
+      "severity": "critical",
+      "id": "CVE-2021-44228",
+      "title": "Log4Shell remote code execution",
+      "description": "log4j-core before 2.17.1 evaluates JNDI lookups in logged messages, allowing remote code execution."
+    },
+    {
+      "ecosystem": "maven",
+      "package": "com.fasterxml.jackson.core:jackson-databind",
+      "vulnerable": "<2.13.4.2",
+      "severity": "critical",
+      "id": "CVE-2022-42003",
+      "title": "Deserialization RCE in jackson-databind",
+      "description": "jackson-databind before 2.13.4.2 permits gadget chains when default typing is enabled."
+    },
+    {
+      "ecosystem": "maven",
+      "package": "org.springframework:spring-core",
+      "vulnerable": "<5.3.18",
+      "severity": "critical",
+      "id": "CVE-2022-22965",
+      "title": "Spring4Shell",
+      "description": "Spring before 5.3.18 allows remote code execution through data binding on JDK 9+."
+    },
+    {
+      "ecosystem": "maven",
+      "package": "org.yaml:snakeyaml",
+      "vulnerable": "<2.0",
+      "severity": "high",
+      "id": "CVE-2022-1471",
+      "title": "Arbitrary code execution in SnakeYAML",
+      "description": "SnakeYAML before 2.0 constructs arbitrary types from untrusted YAML."
+    },
+    {
+      "ecosystem": "go",
+      "package": "github.com/gin-gonic/gin",
+      "vulnerable": "<1.9.1",
+      "severity": "medium",
+      "id": "CVE-2023-29401",
+      "title": "Improper filename handling in gin",
+      "description": "gin before 1.9.1 does not escape filenames in Content-Disposition."
+    },
+    {
+      "ecosystem": "go",
+      "package": "golang.org/x/crypto",
+      "vulnerable": "<0.17.0",
+      "severity": "high",
+      "id": "CVE-2023-48795",
+      "title": "Terrapin prefix truncation in SSH",
+      "description": "golang.org/x/crypto before 0.17.0 is vulnerable to the Terrapin attack."
+    },
+    {
+      "ecosystem": "go",
+      "package": "golang.org/x/net",
+      "vulnerable": "<0.17.0",
+      "severity": "high",
+      "id": "CVE-2023-44487",
+      "title": "HTTP/2 rapid reset denial of service",
+      "description": "golang.org/x/net before 0.17.0 allows a client to exhaust server resources."
+    },
+    {
+      "ecosystem": "rubygems",
+      "package": "rails",
+      "vulnerable": "<6.1.7.3",
+      "severity": "critical",
+      "id": "CVE-2023-22794",
+      "title": "SQL injection via comments in Active Record",
+      "description": "Rails before 6.1.7.3 allows injection through annotate."
+    },
+    {
+      "ecosystem": "rubygems",
+      "package": "nokogiri",
+      "vulnerable": "<1.13.10",
+      "severity": "high",
+      "id": "CVE-2022-23476",
+      "title": "Denial of service in nokogiri",
+      "description": "nokogiri before 1.13.10 mishandles crafted XML."
+    },
+    {
+      "ecosystem": "rubygems",
+      "package": "rack",
+      "vulnerable": "<2.2.6.4",
+      "severity": "high",
+      "id": "CVE-2023-27530",
+      "title": "Denial of service in Rack multipart parsing",
+      "description": "rack before 2.2.6.4 can be exhausted by a crafted multipart request."
+    },
+    {
+      "ecosystem": "composer",
+      "package": "laravel/framework",
+      "vulnerable": "<8.75.0",
+      "severity": "critical",
+      "id": "CVE-2021-43617",
+      "title": "Argument injection in Laravel",
+      "description": "laravel/framework before 8.75.0 mishandles certain query strings."
+    },
+    {
+      "ecosystem": "composer",
+      "package": "symfony/http-kernel",
+      "vulnerable": "<5.4.20",
+      "severity": "high",
+      "id": "CVE-2022-24894",
+      "title": "Session fixation in Symfony",
+      "description": "symfony/http-kernel before 5.4.20 may expose cached private responses."
+    },
+    {
+      "ecosystem": "composer",
+      "package": "guzzlehttp/guzzle",
+      "vulnerable": "<7.4.5",
+      "severity": "high",
+      "id": "CVE-2022-31090",
+      "title": "Credential leak on redirect in Guzzle",
+      "description": "guzzle before 7.4.5 forwards the Authorization header across hosts."
+    }
+  ]
+}
