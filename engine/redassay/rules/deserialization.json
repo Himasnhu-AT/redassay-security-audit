@@ -22,7 +22,8 @@
       ],
       "pattern": "\\b(pickle|cPickle|dill|marshal|shelve)\\.(load|loads)\\s*\\(",
       "description": "Unpickling executes __reduce__ on the incoming object graph. A crafted payload is arbitrary code execution, by design of the format.",
-      "remediation": "Use JSON for data interchange. If you need pickle, sign the payload with HMAC and verify before loading."
+      "remediation": "Use JSON for data interchange. If you need pickle, sign the payload with HMAC and verify before loading.",
+      "skip_in_strings": true
     },
     {
       "id": "deser.yaml-unsafe-load",
@@ -35,7 +36,8 @@
       "pattern": "yaml\\.(load|unsafe_load|full_load)\\s*\\(",
       "not_pattern": "Loader\\s*=\\s*(yaml\\.)?(SafeLoader|CSafeLoader)|yaml\\.safe_load",
       "description": "PyYAML's default loader constructs arbitrary Python objects from !!python/object tags.",
-      "remediation": "Call yaml.safe_load(), or pass Loader=yaml.SafeLoader explicitly."
+      "remediation": "Call yaml.safe_load(), or pass Loader=yaml.SafeLoader explicitly.",
+      "skip_in_strings": true
     },
     {
       "id": "deser.js-node-serialize",
@@ -48,7 +50,8 @@
       ],
       "pattern": "(node-serialize|funcster|serialize-to-js)|\\bunserialize\\s*\\(",
       "description": "These libraries restore functions from their source text, which is remote code execution on untrusted input.",
-      "remediation": "Use JSON.parse(). If you need richer types, use a schema-validated codec."
+      "remediation": "Use JSON.parse(). If you need richer types, use a schema-validated codec.",
+      "skip_in_strings": true
     },
     {
       "id": "deser.php-unserialize",
@@ -74,7 +77,8 @@
       ],
       "pattern": "new\\s+ObjectInputStream\\s*\\(|\\.readObject\\s*\\(\\s*\\)",
       "description": "Java deserialization gadget chains in common libraries turn readObject into arbitrary code execution.",
-      "remediation": "Use a data format (JSON/protobuf). If you must, install an ObjectInputFilter allowlist."
+      "remediation": "Use a data format (JSON/protobuf). If you must, install an ObjectInputFilter allowlist.",
+      "skip_in_strings": true
     },
     {
       "id": "deser.dotnet-binaryformatter",
@@ -99,7 +103,8 @@
       "pattern": "Marshal\\.load\\s*\\(|YAML\\.load\\s*\\(",
       "not_pattern": "YAML\\.safe_load|safe_load",
       "description": "Both reconstruct arbitrary Ruby objects and are exploitable with known gadget chains.",
-      "remediation": "Use JSON.parse or YAML.safe_load with an explicit permitted_classes list."
+      "remediation": "Use JSON.parse or YAML.safe_load with an explicit permitted_classes list.",
+      "skip_in_strings": true
     },
     {
       "id": "deser.xml-external-entity",

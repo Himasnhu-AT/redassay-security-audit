@@ -117,7 +117,8 @@
       "remediation": "Replace with subprocess.run([...], check=True).",
       "cwe": [
         "CWE-78"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "cmd.node-exec",
@@ -133,7 +134,8 @@
       "remediation": "Use execFile()/spawn() with an argument array, which never involves a shell.",
       "cwe": [
         "CWE-78"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "cmd.ruby-backtick",
@@ -179,7 +181,8 @@
       "remediation": "Use ast.literal_eval() for data, a dispatch dict for behaviour, or json.loads() for structured input.",
       "cwe": [
         "CWE-95"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "code.js-eval",
@@ -199,7 +202,8 @@
       "remediation": "Parse data with JSON.parse(). For dynamic dispatch use an object map keyed by an allowlisted name.",
       "cwe": [
         "CWE-95"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "code.node-vm",
@@ -218,7 +222,8 @@
       ],
       "references": [
         "https://nodejs.org/api/vm.html#vm-executing-javascript"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "code.php-eval-include",
@@ -234,7 +239,8 @@
       "cwe": [
         "CWE-95",
         "CWE-98"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "inject.ssti-render-string",
@@ -266,7 +272,8 @@
       "remediation": "Express the condition with standard query operators. Disable server-side JS on the mongod.",
       "cwe": [
         "CWE-943"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "inject.nosql-operator-injection",

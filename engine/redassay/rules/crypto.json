@@ -77,7 +77,8 @@
       "remediation": "Use an authenticated mode: AES-GCM or ChaCha20-Poly1305, with a unique nonce per message.",
       "cwe": [
         "CWE-327"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "crypto.static-iv",
@@ -146,7 +147,8 @@
       "remediation": "Verify certificates. For an internal CA, add the CA bundle rather than disabling the check.",
       "cwe": [
         "CWE-295"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "crypto.weak-tls-version",
@@ -172,7 +174,8 @@
       "remediation": "Require TLS 1.2 as a floor, 1.3 where available.",
       "cwe": [
         "CWE-327"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "crypto.des-rc4-3des",
@@ -194,7 +197,8 @@
       "remediation": "Use AES-256-GCM or ChaCha20-Poly1305.",
       "cwe": [
         "CWE-327"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "crypto.jwt-none-alg",
@@ -215,7 +219,8 @@
       "remediation": "Always verify with an explicit algorithm allowlist and the correct key. jwt.decode(token, key, algorithms=['RS256']).",
       "cwe": [
         "CWE-347"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "crypto.constant-time-compare",

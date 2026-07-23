@@ -27,7 +27,8 @@
       "pattern": "\\.(inner|outer)HTML\\s*(\\+)?=\\s*(?![\\\"'`]\\s*[\\\"'`]\\s*;?\\s*$)",
       "not_pattern": "DOMPurify|sanitize|escapeHtml",
       "description": "Writing to innerHTML parses the string as HTML. Any attacker-controlled substring can introduce a script-executing element such as <img onerror=...>.",
-      "remediation": "Use textContent for text. If you must render HTML, run it through DOMPurify.sanitize() first."
+      "remediation": "Use textContent for text. If you must render HTML, run it through DOMPurify.sanitize() first.",
+      "skip_in_strings": true
     },
     {
       "id": "xss.document-write",
@@ -41,7 +42,8 @@
       ],
       "pattern": "document\\.(write|writeln)\\s*\\(\\s*(?![\\\"'][^\\\"']*[\\\"']\\s*\\))",
       "description": "document.write() injects into the parser stream, so it executes scripts and cannot be sanitized after the fact.",
-      "remediation": "Build nodes with createElement/textContent and append them."
+      "remediation": "Build nodes with createElement/textContent and append them.",
+      "skip_in_strings": true
     },
     {
       "id": "xss.react-dangerously-set",
@@ -55,7 +57,8 @@
       "pattern": "dangerouslySetInnerHTML\\s*=\\s*\\{\\{",
       "not_pattern": "DOMPurify|sanitizeHtml|sanitize\\(",
       "description": "React escapes by default; this prop opts out of that for the value it is given.",
-      "remediation": "Sanitize with DOMPurify before passing, or render as children so React escapes it."
+      "remediation": "Sanitize with DOMPurify before passing, or render as children so React escapes it.",
+      "skip_in_strings": true
     },
     {
       "id": "xss.jquery-html-sink",
