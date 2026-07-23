@@ -152,6 +152,8 @@ class SecretScanner(Scanner):
         return source.language not in {"lockfile", "npm-lock", "yarn-lock", "poetry-lock", "cargo-lock", "go-lock", "composer-lock", "pip-lock"}
 
     def scan_file(self, source: SourceFile, context: ScanContext) -> Iterator[Finding]:
+        from .. import suppress as suppress_mod
+
         lines = source.lines()
         low_risk = bool(LOW_RISK_PATHS.search(source.path))
         seen_values: set = set()
@@ -168,6 +170,8 @@ class SecretScanner(Scanner):
                     continue
                 value = match.group(1) if match.groups() else match.group(0)
                 if looks_like_placeholder(value):
+                    continue
+                if suppress_mod.suppressed_by_source(lines, line_no, f"secret.{rule_slug}"):
                     continue
                 key = (rule_slug, value)
                 if key in seen_values:
@@ -207,6 +211,8 @@ class SecretScanner(Scanner):
             for match in SECRET_NAME.finditer(line):
                 name, value = match.group(1), match.group(2)
                 if looks_like_placeholder(value) or not is_high_entropy(value):
+                    continue
+                if suppress_mod.suppressed_by_source(lines, line_no, "secret.hardcoded-assignment"):
                     continue
                 key = ("generic", value)
                 if key in seen_values:

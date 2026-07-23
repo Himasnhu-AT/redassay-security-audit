@@ -33,6 +33,7 @@ class FindingIdTest(unittest.TestCase):
     def test_ignores_secret_rotation(self):
         # redassay: ignore secret.aws-access-key-id - fixture values, not real keys
         a = finding_id("secret.aws", "cfg.py", 'KEY = "AKIA0000000000000000"')
+        # redassay: ignore secret.aws-access-key-id - fixture values, not real keys
         b = finding_id("secret.aws", "cfg.py", 'KEY = "AKIA1111111111111111"')
         self.assertEqual(a, b)
 
