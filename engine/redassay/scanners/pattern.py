@@ -36,7 +36,7 @@ class CompiledRule:
         "raw", "id", "title", "severity", "confidence", "description", "remediation",
         "cwe", "owasp", "tags", "references", "languages", "pattern", "not_pattern",
         "nearby", "nearby_window", "nearby_absent", "path_include", "path_exclude",
-        "match_comments", "pack", "max_matches",
+        "match_comments", "pack", "max_matches", "skip_in_strings",
     )
 
     def __init__(self, raw: Dict[str, Any]):
@@ -54,6 +54,7 @@ class CompiledRule:
         self.languages = raw.get("languages") or []
         self.pack = raw.get("pack", "")
         self.match_comments = bool(raw.get("match_comments", False))
+        self.skip_in_strings = bool(raw.get("skip_in_strings", False))
         self.max_matches = int(raw.get("max_matches", MAX_MATCHES_PER_RULE_PER_FILE))
         flags = re.IGNORECASE if raw.get("ignore_case") else 0
         self.pattern = re.compile(raw["pattern"], flags)
@@ -85,6 +86,24 @@ def compile_rules(raw_rules: Iterable[Dict[str, Any]]) -> List[CompiledRule]:
         except re.error as exc:
             raise rule_packs.RuleError(f"rule {raw.get('id')}: bad regex - {exc}") from exc
     return compiled
+
+
+_STRING_SPAN = re.compile(r"""(['"`])(?:\\.|(?!\1).)*\1""")
+
+
+def string_spans(line: str) -> List[Tuple[int, int]]:
+    """Character ranges occupied by string literals on one line.
+
+    Used by rules that must not fire on their own example text. A rule pack that
+    documents an eval call in a description, or a test asserting on a snippet, is
+    not a vulnerability - and those two cases account for most of the noise a
+    code-execution rule produces inside a security codebase.
+    """
+    return [(m.start(), m.end()) for m in _STRING_SPAN.finditer(line)]
+
+
+def inside_string(spans: Sequence[Tuple[int, int]], index: int) -> bool:
+    return any(start < index < end - 1 for start, end in spans)
 
 
 def is_comment_line(line: str, language: Optional[str]) -> bool:
@@ -135,6 +154,7 @@ class PatternScanner(Scanner):
             if len(line) > 2000:          # minified or generated; nothing useful here
                 continue
             comment = is_comment_line(line, source.language)
+            spans: Optional[List[Tuple[int, int]]] = None
             for rule in applicable:
                 if comment and not rule.match_comments:
                     continue
@@ -145,6 +165,11 @@ class PatternScanner(Scanner):
                     continue
                 if rule.not_pattern and rule.not_pattern.search(line):
                     continue
+                if rule.skip_in_strings:
+                    if spans is None:
+                        spans = string_spans(line)
+                    if inside_string(spans, match.start()):
+                        continue
                 if rule.nearby or rule.nearby_absent:
                     neighbourhood = _window(lines, index, rule.nearby_window)
                     if rule.nearby and not rule.nearby.search(neighbourhood):
