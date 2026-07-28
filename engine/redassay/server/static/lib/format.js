@@ -47,26 +47,22 @@ export function relativeTime(iso, now = Date.now()) {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return "";
   const seconds = Math.round((now - then) / 1000);
-  if (seconds < 0) return "just now";
   if (seconds < 45) return "just now";
   const units = [
-    ["minute", 60],
-    ["hour", 3600],
-    ["day", 86400],
-    ["week", 604800],
-    ["month", 2629800],
     ["year", 31557600],
+    ["month", 2629800],
+    ["week", 604800],
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
   ];
-  let label = "minute";
-  let size = 60;
-  for (const [unitLabel, unitSize] of units) {
-    if (seconds < unitSize * 1.5 && unitLabel !== "minute") break;
-    label = unitLabel;
-    size = unitSize;
-    if (seconds < unitSize * 45) break;
+  for (const [label, size] of units) {
+    if (seconds >= size) {
+      const count = Math.round(seconds / size);
+      return `${count} ${label}${count === 1 ? "" : "s"} ago`;
+    }
   }
-  const count = Math.max(1, Math.round(seconds / size));
-  return `${count} ${label}${count === 1 ? "" : "s"} ago`;
+  return "just now";
 }
 
 export function pluralize(count, singular, plural) {
