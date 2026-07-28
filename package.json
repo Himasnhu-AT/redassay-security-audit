@@ -1,0 +1,16 @@
+{
+  "name": "redassay",
+  "version": "0.1.0",
+  "description": "Security audit loop for Claude Code: scan, triage on a local board, apply approved fixes.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/js/*.test.js",
+    "test:py": "python3 -m unittest discover -s tests/python -t . -p 'test_*.py'",
+    "test:all": "bash scripts/run-tests.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
