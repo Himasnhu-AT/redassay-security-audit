@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>redassay board</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mark">redassay</span>
+    <span class="repo" id="repo-name">—</span>
+  </div>
+  <div class="counts" id="header-counts"></div>
+  <div class="topbar-actions">
+    <span class="queue-pill" id="queue-pill" hidden></span>
+    <button class="btn" id="btn-rescan" type="button">Rescan</button>
+    <button class="btn btn-primary" id="btn-fix" type="button" disabled>Fix selected</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="Search findings  /" autocomplete="off" spellcheck="false">
+    </div>
+
+    <section class="facet">
+      <h2>Severity</h2>
+      <div class="chips" id="facet-severity"></div>
+    </section>
+
+    <section class="facet">
+      <h2>Status</h2>
+      <div class="chips" id="facet-status"></div>
+    </section>
+
+    <section class="facet">
+      <h2>Sort</h2>
+      <div class="chips" id="facet-sort"></div>
+    </section>
+
+    <section class="facet">
+      <h2>Hotspots</h2>
+      <ul class="hotspots" id="hotspots"></ul>
+    </section>
+
+    <section class="facet shortcuts">
+      <h2>Keys</h2>
+      <dl>
+        <dt>j / k</dt><dd>move</dd>
+        <dt>x</dt><dd>select</dd>
+        <dt>f</dt><dd>request fix</dd>
+        <dt>d</dt><dd>dismiss</dd>
+        <dt>c</dt><dd>comment</dd>
+        <dt>/</dt><dd>search</dd>
+      </dl>
+    </section>
+  </aside>
+
+  <section class="list-pane">
+    <div class="list-head">
+      <label class="select-all"><input type="checkbox" id="select-all"> <span id="list-count">0 findings</span></label>
+      <span class="selection-note" id="selection-note"></span>
+    </div>
+    <ul class="findings" id="findings"></ul>
+    <div class="empty" id="empty" hidden>
+      <p>Nothing here.</p>
+      <p class="muted">Either the filters are too narrow, or this repository is in better shape than expected.</p>
+    </div>
+  </section>
+
+  <section class="detail-pane" id="detail">
+    <div class="detail-empty">
+      <p>Select a finding.</p>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>
