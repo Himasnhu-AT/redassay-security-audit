@@ -65,7 +65,7 @@
       ],
       "pattern": "@(app|bp|blueprint|router)\\.(route|post|put|patch|delete)\\s*\\(",
       "nearby_absent": "login_required|permission_required|requires_auth|current_user|authorize|@jwt_required|Depends\\s*\\(",
-      "nearby_window": 6,
+      "nearby_window": 2,
       "nearby": "(methods\\s*=\\s*\\[[^\\]]*(POST|PUT|PATCH|DELETE)|\\.(post|put|patch|delete)\\s*\\()",
       "description": "A state-changing endpoint with no visible authorization check nearby. Worth confirming by hand - authorization is the one class of bug scanners cannot decide for you.",
       "remediation": "Apply the framework's authorization decorator, and check object ownership inside the handler, not just authentication.",
