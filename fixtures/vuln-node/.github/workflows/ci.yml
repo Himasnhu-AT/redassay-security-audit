@@ -1,0 +1,19 @@
+name: ci
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+permissions: write-all
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: some-vendor/setup-thing@v2
+      - name: Greet
+        run: echo "Building ${{ github.event.pull_request.title }}"
+      - name: Install
+        run: curl -sL https://example.invalid/install.sh | bash
+      - name: Debug
+        run: echo "${{ secrets.DEPLOY_KEY }}"
