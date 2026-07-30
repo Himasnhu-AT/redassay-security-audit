@@ -113,10 +113,28 @@ class TaintScope:
     """Names known to hold attacker-controlled data inside one function body."""
 
     def __init__(self) -> None:
-        self.names: Dict[str, str] = {}   # name -> human description of the origin
+        self.names: Dict[str, str] = {}    # name -> human description of the origin
+        self.guarded: Set[str] = set()     # names the function validates before use
 
     def mark(self, name: str, origin: str) -> None:
         self.names.setdefault(name, origin)
+
+    def guard(self, name: str) -> None:
+        """Record that a name is checked against something before it is used.
+
+        This is not proof the check is correct - it is proof a human thought
+        about it. That is worth a confidence downgrade rather than a suppression,
+        because an allowlist that a reviewer wrote is a different risk from no
+        check at all, and reporting both identically trains people to ignore the
+        tool.
+        """
+        self.guarded.add(name)
+
+    def is_guarded(self, node: ast.AST) -> bool:
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Name) and sub.id in self.guarded:
+                return True
+        return False
 
     def origin(self, node: ast.AST) -> Optional[str]:
         """Return a description of why this expression is tainted, or None."""
@@ -229,6 +247,14 @@ class _Collector(ast.NodeVisitor):
             if origin:
                 for name in _target_names(node.target):
                     self.scope.mark(name, origin)
+        self.generic_visit(node)
+
+    def visit_If(self, node: ast.If) -> None:
+        """Names compared against a container, or run through a validator, inside
+        an `if` whose body bails out, count as guarded."""
+        if _bails_out(node.body) or _bails_out(node.orelse):
+            for name in _guarded_names(node.test):
+                self.scope.guard(name)
         self.generic_visit(node)
 
     def visit_With(self, node: ast.With) -> None:
@@ -363,7 +389,43 @@ class _Collector(ast.NodeVisitor):
     def _hit(self, rule: str, node: ast.AST, extras: Dict[str, Any]) -> None:
         extras = dict(extras)
         extras["function"] = self.func_stack[-1] if self.func_stack else "<module>"
+        if extras.get("taint"):
+            extras["guarded"] = self.scope.is_guarded(node)
         self.hits.append((rule, node, extras))
+
+
+GUARD_CALLS = {
+    "startswith", "endswith", "isalnum", "isdigit", "isidentifier", "match",
+    "fullmatch", "is_relative_to", "samefile", "validate", "is_safe_url",
+    "secure_filename", "urlparse", "quote", "escape", "int", "float", "uuid",
+}
+
+
+def _bails_out(body: Sequence[ast.stmt]) -> bool:
+    """Does this branch abort the request rather than fall through?"""
+    for statement in body or ():
+        if isinstance(statement, (ast.Raise, ast.Return)):
+            return True
+        if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Call):
+            chain = _call_name(statement.value)
+            if chain and chain[-1] in {"abort", "exit", "fail", "forbid", "deny"}:
+                return True
+    return False
+
+
+def _guarded_names(test: ast.AST) -> Set[str]:
+    """Names that the condition actually checks."""
+    names: Set[str] = set()
+    for node in ast.walk(test):
+        if isinstance(node, ast.Compare):
+            for operand in [node.left] + list(node.comparators):
+                names.update(n.id for n in ast.walk(operand) if isinstance(n, ast.Name))
+        elif isinstance(node, ast.Call):
+            chain = _call_name(node)
+            if chain and chain[-1] in GUARD_CALLS:
+                for arg in list(node.args) + [node.func]:
+                    names.update(n.id for n in ast.walk(arg) if isinstance(n, ast.Name))
+    return names
 
 
 def _target_names(target: ast.AST) -> List[str]:
@@ -576,6 +638,10 @@ def _adjust(meta: Dict[str, Any], extras: Dict[str, Any]) -> Tuple[str, str]:
     """Confirmed taint raises both severity and confidence - that is the point of tracking it."""
     severity, confidence = meta["severity"], meta["confidence"]
     if extras.get("taint"):
+        if extras.get("guarded"):
+            # A validated value is still worth a look - the check may be wrong -
+            # but it does not belong next to the unguarded ones.
+            return _step_down(severity), "low"
         confidence = "high"
         if severity == "high":
             severity = "critical"
@@ -584,11 +650,25 @@ def _adjust(meta: Dict[str, Any], extras: Dict[str, Any]) -> Tuple[str, str]:
     return severity, confidence
 
 
+_STEP_DOWN = {"critical": "medium", "high": "medium", "medium": "low", "low": "info", "info": "info"}
+
+
+def _step_down(severity: str) -> str:
+    return _STEP_DOWN.get(severity, "low")
+
+
 def _describe(rule_id: str, meta: Dict[str, Any], extras: Dict[str, Any]) -> str:
     parts: List[str] = []
     function = extras.get("function")
     taint = extras.get("taint")
-    if taint:
+    if taint and extras.get("guarded"):
+        parts.append(
+            f"A value from `{taint}` reaches this call inside `{function}()`, but the function "
+            "validates it first - a comparison or a validator call guards the path. Confirm the "
+            "check is strict enough; a prefix match or a partial allowlist is a common way for "
+            "this to look safe and not be."
+        )
+    elif taint:
         parts.append(
             f"A value originating from `{taint}` reaches this call inside `{function}()`. "
             "The taint tracker followed it through assignment and string building within the "
