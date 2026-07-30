@@ -214,13 +214,15 @@
         "ruby",
         "php"
       ],
-      "pattern": "(algorithms\\s*[:=]\\s*\\[?\\s*[\\\"']none[\\\"']|verify\\s*[:=]\\s*False|verify_signature[\\\"']?\\s*:\\s*False|jwt\\.decode\\s*\\([^)]*verify\\s*=\\s*False|jwt\\.decode\\s*\\(\\s*\\w+\\s*\\)\\s*$|decode\\s*\\([^)]*\\{\\s*\\}\\s*\\)|jsonwebtoken\\.decode\\s*\\()",
+      "pattern": "(algorithms\\s*[:=]\\s*\\[?\\s*[\\\"']none[\\\"']|verify_signature[\\\"']?\\s*:\\s*(False|false)|jwt\\.decode\\s*\\([^)]*verify\\s*=\\s*False|jwt\\.decode\\s*\\(\\s*\\w+\\s*\\)|jsonwebtoken\\.decode\\s*\\(|\\.decode\\s*\\([^)]*,\\s*options\\s*=\\s*\\{\\s*[\\\"']verify_signature[\\\"']\\s*:\\s*False)",
       "description": "Decoding a JWT without verifying its signature means the client decides what the claims say - including which user they are.",
       "remediation": "Always verify with an explicit algorithm allowlist and the correct key. jwt.decode(token, key, algorithms=['RS256']).",
       "cwe": [
         "CWE-347"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "nearby": "(?i)\\bjwt\\b|json_?web_?token|access_token|id_token|bearer",
+      "nearby_window": 3
     },
     {
       "id": "crypto.constant-time-compare",
