@@ -285,15 +285,17 @@ class _Collector(ast.NodeVisitor):
         if tuple(chain) in SHELL_FUNCS or (len(chain) >= 2 and (chain[0], chain[-1]) in SHELL_FUNCS):
             shell = _keyword(node, "shell")
             uses_shell = _is_true(shell) or (chain[0] == "os" and chain[-1] in {"system", "popen"})
-            if uses_shell and first is not None:
-                if not _is_literal(first):
+            if uses_shell:
+                if first is not None and not _is_literal(first):
                     self._hit("py.shell-dynamic", node, {
                         "func": ".".join(chain),
                         "taint": self.scope.origin(first),
                         "dynamic": _is_dynamic_string(first),
                     })
-            elif _is_true(shell):
-                self._hit("py.shell-true-literal", node, {"func": ".".join(chain)})
+                elif _is_true(shell):
+                    # Literal command today, but shell=True is what makes the
+                    # next edit dangerous. Low severity, still worth saying.
+                    self._hit("py.shell-true-literal", node, {"func": ".".join(chain)})
 
         if tail in SQL_EXECUTORS and first is not None:
             if _is_dynamic_string(first) or self.scope.is_tainted(first):
