@@ -38,10 +38,12 @@ STICKY = {DISMISSED, FIXED, VERIFIED}
 #: Statuses that still need work.
 ACTIONABLE = {OPEN, CONFIRMED, QUEUED, FIXING}
 
+# FIXED is reachable from every pre-fix state: an agent can repair something
+# nobody triaged, and refusing that transition made record_fix() fail silently.
 _LEGAL_TRANSITIONS = {
-    OPEN: {CONFIRMED, QUEUED, DISMISSED, FIXING},
-    CONFIRMED: {QUEUED, DISMISSED, FIXING, OPEN},
-    QUEUED: {FIXING, DISMISSED, CONFIRMED, OPEN},
+    OPEN: {CONFIRMED, QUEUED, DISMISSED, FIXING, FIXED},
+    CONFIRMED: {QUEUED, DISMISSED, FIXING, FIXED, OPEN},
+    QUEUED: {FIXING, FIXED, DISMISSED, CONFIRMED, OPEN},
     FIXING: {FIXED, QUEUED, DISMISSED, OPEN},
     FIXED: {VERIFIED, OPEN, DISMISSED, FIXING},
     VERIFIED: {OPEN},
