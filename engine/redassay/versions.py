@@ -30,9 +30,12 @@ def parse(version: str) -> Tuple[List[int], int, str]:
         match = _NUM.match(token)
         if match:
             parts.append(int(match.group(1)))
+            # PEP 440 glues the stage to the number: "1.0.0a1", "2.0b3".
             tail = token[match.end():].lower()
-            if tail and tail in _PRE_RANK:
-                pre_rank = _PRE_RANK[tail]
+            stage = re.match(r"^([a-z]+)", tail)
+            key = stage.group(1) if stage else tail
+            if key and key in _PRE_RANK:
+                pre_rank = _PRE_RANK[key]
         else:
             # "rc1", "beta2": the alphabetic prefix names the stage.
             alpha = re.match(r"^([A-Za-z]+)", token)
