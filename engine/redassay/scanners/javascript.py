@@ -35,6 +35,20 @@ ASSIGN_FROM_REQ = re.compile(
 TEMPLATE_VARS = re.compile(r"\$\{\s*([\w.$\[\]'\"]+)")
 
 
+def strip_comments(text: str) -> str:
+    """Blank comments only, keeping string contents intact.
+
+    Rules that match a *literal* - `app.set("trust proxy", true)` - need to see
+    the text inside the quotes. Taint rules do not, and are better off without
+    it, so the two groups run over different views of the same file.
+    """
+    def blank(match: re.Match) -> str:
+        return re.sub(r"[^\n]", " ", match.group(0))
+
+    text = _BLOCK_COMMENT.sub(blank, text)
+    return _LINE_COMMENT.sub(blank, text)
+
+
 def strip_noise(text: str) -> str:
     """Blank comments and string contents, preserving offsets so line numbers hold."""
     def blank(match: re.Match) -> str:
@@ -184,9 +198,9 @@ class JavaScriptScanner(Scanner):
         raw = source.read()
         if len(raw) > 800_000:
             return
-        clean = strip_noise(raw)
+        clean = strip_noise(raw)          # identifiers only: taint analysis
+        literal = strip_comments(raw)      # keeps string bodies: literal rules
         raw_lines = raw.splitlines()
-        clean_lines = clean.splitlines()
         tainted = collect_tainted(clean)
         counts: Dict[str, int] = {}
         from .. import suppress as suppress_mod
@@ -234,8 +248,8 @@ class JavaScriptScanner(Scanner):
 
         for rule_id, pattern, meta in STATIC_RULES:
             negative = meta.get("not_pattern")
-            for match in re.finditer(pattern, clean):
-                line_no = clean.count("\n", 0, match.start()) + 1
+            for match in re.finditer(pattern, literal):
+                line_no = literal.count("\n", 0, match.start()) + 1
                 raw_fragment = _raw_window(raw_lines, line_no, radius=1)
                 if negative and re.search(negative, raw_fragment):
                     continue
