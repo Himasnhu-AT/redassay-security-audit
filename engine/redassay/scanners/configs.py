@@ -255,28 +255,58 @@ class ConfigScanner(Scanner):
                 scanner=self.name,
             )
 
+        # env entries look like:
+        #   - name: DB_PASSWORD
+        #     value: hunter2
+        # so the secret-ish word is on the *name* line and the literal is on the
+        # next one. Looking for the keyword in the value line - the first version
+        # of this check - never matched a real manifest.
+        name_pattern = re.compile(
+            r"^\s*-?\s*name\s*:\s*[\"']?([A-Za-z0-9_.-]*"
+            r"(?:PASSWORD|PASSWD|SECRET|TOKEN|API_?KEY|CREDENTIAL)"
+            r"[A-Za-z0-9_.-]*)",
+            re.IGNORECASE,
+        )
         for index, line in enumerate(lines):
-            if re.search(r"^\s*-?\s*(value|key)\s*:\s*.*(password|secret|token)", line, re.IGNORECASE):
-                value = line.split(":", 1)[-1].strip().strip("\"'")
-                if len(value) > 8 and not value.startswith(("$", "{", "<")):
-                    yield self.make_finding(
-                        rule_id="config.k8s-inline-secret",
-                        title="Credential inlined in a manifest env value",
-                        source=source,
-                        line=index + 1,
-                        snippet=_redact_line(line),
-                        severity="high",
-                        confidence="low",
-                        description=(
-                            "A literal credential in a manifest is stored in the cluster's object "
-                            "store and visible to anyone with get on the resource."
-                        ),
-                        remediation="Reference a Secret with valueFrom.secretKeyRef, backed by an external secret store.",
-                        cwe=["CWE-798"],
-                        owasp=["A05:2021 Security Misconfiguration"],
-                        tags=["config", "kubernetes", "secrets"],
-                        scanner=self.name,
-                    )
+            name_match = name_pattern.search(line)
+            if not name_match:
+                continue
+            for offset in (1, 2):
+                if index + offset >= len(lines):
+                    break
+                candidate = lines[index + offset]
+                if not re.match(r"^\s*value\s*:", candidate):
+                    continue
+                # valueFrom/secretKeyRef is the correct shape and never reaches here.
+                value = candidate.split(":", 1)[-1].strip().strip("\"'")
+                if len(value) <= 8 or value.startswith(("$", "{", "<")):
+                    break
+                yield self.make_finding(
+                    rule_id="config.k8s-inline-secret",
+                    title=f"{name_match.group(1)} is set to a literal value in the manifest",
+                    source=source,
+                    line=index + offset + 1,
+                    snippet=_redact_line(candidate),
+                    severity="high",
+                    confidence="medium",
+                    description=(
+                        f"`{name_match.group(1)}` carries an inline literal. Manifests are stored in "
+                        "the cluster's object store and readable by anyone with get on the resource, "
+                        "and they usually end up in version control as well."
+                    ),
+                    remediation=(
+                        "Replace the literal with a reference:\n"
+                        "  valueFrom:\n"
+                        "    secretKeyRef:\n"
+                        "      name: app-secrets\n"
+                        "      key: db-password"
+                    ),
+                    cwe=["CWE-798"],
+                    owasp=["A05:2021 Security Misconfiguration"],
+                    tags=["config", "kubernetes", "secrets"],
+                    scanner=self.name,
+                )
+                break
 
 
 def _redact(value: str) -> str:
