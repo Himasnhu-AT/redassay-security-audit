@@ -145,7 +145,7 @@
       ],
       "pattern": "insertAdjacentHTML\\s*\\(\\s*[\\\"'][^\\\"']*[\\\"']\\s*,\\s*(?![\\\"'])",
       "not_pattern": "DOMPurify|sanitize",
-      "description": "Same HTML-parsing sink as innerHTML.",
+      "description": "insertAdjacentHTML parses its second argument as HTML, exactly like innerHTML. Anything an attacker controls in that string can introduce a script-executing element, and sanitizing afterwards is too late.",
       "remediation": "Build the node explicitly or sanitize the markup."
     },
     {

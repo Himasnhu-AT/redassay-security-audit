@@ -221,8 +221,9 @@
         "CWE-347"
       ],
       "skip_in_strings": true,
-      "nearby": "(?i)\\bjwt\\b|json_?web_?token|access_token|id_token|bearer",
-      "nearby_window": 3
+      "nearby": "\\bjwt\\b|json_?web_?token|access_token|id_token|bearer",
+      "nearby_window": 3,
+      "ignore_case": true
     },
     {
       "id": "crypto.constant-time-compare",
