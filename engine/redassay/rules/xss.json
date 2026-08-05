@@ -28,7 +28,9 @@
       "not_pattern": "DOMPurify|sanitize|escapeHtml",
       "description": "Writing to innerHTML parses the string as HTML. Any attacker-controlled substring can introduce a script-executing element such as <img onerror=...>.",
       "remediation": "Use textContent for text. If you must render HTML, run it through DOMPurify.sanitize() first.",
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "nearby_absent": "DOMPurify|sanitiz|escapeHtml|escapeHTML|textContent|encodeURI|\\.escape\\(",
+      "nearby_window": 6
     },
     {
       "id": "xss.document-write",
