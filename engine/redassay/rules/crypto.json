@@ -119,12 +119,13 @@
       ],
       "pattern": "(Math\\.random\\s*\\(|random\\.(random|randint|choice|randrange|sample)\\s*\\(|new\\s+Random\\s*\\(|mt_rand\\s*\\(|rand\\s*\\()",
       "nearby": "token|secret|password|passwd|key|nonce|salt|otp|session|csrf|reset|api_?key|uuid",
-      "nearby_window": 4,
+      "nearby_window": 1,
       "description": "These PRNGs are predictable from a handful of outputs. A token generated from one can be reproduced by an attacker.",
       "remediation": "Use secrets.token_urlsafe() (Python), crypto.randomBytes() (Node), SecureRandom (Java), crypto/rand (Go).",
       "cwe": [
         "CWE-338"
-      ]
+      ],
+      "not_pattern": "\\b(date|time|day|month|year|hour|minute|second|jitter|delay|backoff|sleep|shuffle|sample|color|colour|index|offset|seed_?data|fake|mock|dummy)\\b"
     },
     {
       "id": "crypto.tls-verify-disabled",
