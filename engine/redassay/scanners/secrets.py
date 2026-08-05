@@ -87,7 +87,11 @@ PLACEHOLDER_MARKERS = re.compile(
 LOW_RISK_PATHS = re.compile(
     r"(?i)(^|/)(test|tests|spec|specs|fixtures?|examples?|samples?|docs?|mocks?|"
     r"__tests__|__mocks__|e2e|demo)(/|$)|\.(test|spec)\.[a-z]+$|"
-    r"(^|/)(\.env\.(example|sample|template)|.*\.example|.*\.sample|.*\.template)$"
+    r"(^|/)(\.env\.(example|sample|template)|.*\.example|.*\.sample|.*\.template)$|"
+    # Prose: READMEs and changelogs quote connection strings as documentation.
+    # Still reported, because sometimes the example is the real one - but not at
+    # the severity of a credential found in a settings module.
+    r"\.(md|rst|adoc|txt)$"
 )
 
 ENTROPY_FLOOR_BASE64 = 3.6
