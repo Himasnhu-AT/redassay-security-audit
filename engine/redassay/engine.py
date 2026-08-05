@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
-from . import models, severity as sev, triage as triage_mod
+from . import gitinfo, models, severity as sev, triage as triage_mod
 from .config import Config
 from .models import Finding
 from .scanners import ScanContext, build_all
@@ -27,6 +27,8 @@ class ScanResult:
     scanners_run: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     merge: Optional[MergeResult] = None
+    git: Dict[str, Any] = field(default_factory=dict)
+    scoped_to: List[str] = field(default_factory=list)
 
     def counts_by_severity(self) -> Dict[str, int]:
         out = {name: 0 for name in sev.ORDER}
@@ -46,6 +48,8 @@ class ScanResult:
             "total": len(self.findings),
             "errors": list(self.errors),
             "merge": self.merge.to_dict() if self.merge else None,
+            "git": dict(self.git),
+            "scoped_to": list(self.scoped_to),
         }
 
 
@@ -53,13 +57,40 @@ def scan(
     config: Config,
     progress: Optional[ProgressFn] = None,
     extra_rule_dirs: Optional[Sequence[str]] = None,
+    since: Optional[str] = None,
+    blame: bool = False,
 ) -> ScanResult:
-    """Run every enabled scanner over the configured root."""
+    """Run every enabled scanner over the configured root.
+
+    `since` restricts the walk to files that differ from a git ref, which is what
+    makes this usable as a pull-request gate rather than a one-off inventory.
+    """
     started = time.time()
     emit = progress or (lambda event, data: None)
 
+    include = list(config.include)
+    scoped_to: List[str] = []
+    if since:
+        changed = gitinfo.changed_files(config.root, since)
+        if changed is None:
+            raise ValueError(
+                f"cannot diff against '{since}' - not a git repository, or the ref does not exist"
+            )
+        if not changed:
+            emit("walk:done", {"files": 0, "bytes": 0, "languages": {}})
+            return ScanResult(
+                duration=time.time() - started,
+                git=gitinfo.context(config.root),
+                scoped_to=[],
+            )
+        # An explicit --include intersects with the diff rather than replacing it.
+        include = [p for p in changed if not config.include or any(
+            p == g.rstrip("/") or p.startswith(g.rstrip("/") + "/") for g in config.include
+        )]
+        scoped_to = list(include)
+
     options = WalkOptions(
-        include=list(config.include),
+        include=include,
         exclude=list(config.exclude),
         max_bytes=config.max_file_bytes,
         respect_gitignore=config.respect_gitignore,
@@ -97,6 +128,10 @@ def scan(
     findings = triage_mod.triage(findings, min_severity=config.min_severity)
     emit("triage:done", {"findings": len(findings)})
 
+    if blame:
+        annotated = gitinfo.annotate(config.root, findings)
+        emit("blame:done", {"annotated": annotated})
+
     return ScanResult(
         findings=findings,
         files_scanned=len(files),
@@ -105,6 +140,8 @@ def scan(
         duration=time.time() - started,
         scanners_run=[s.name for s in scanners],
         errors=errors,
+        git=gitinfo.context(config.root),
+        scoped_to=scoped_to,
     )
 
 
@@ -112,11 +149,14 @@ def scan_and_merge(
     config: Config,
     progress: Optional[ProgressFn] = None,
     store: Optional[Store] = None,
+    since: Optional[str] = None,
+    blame: bool = False,
 ) -> ScanResult:
     """Scan, fold the result into the store, and record the run."""
-    result = scan(config, progress=progress)
+    result = scan(config, progress=progress, since=since, blame=blame)
     store = store or Store.open(config.root)
-    scope = list(config.include) or ["."]
+    # A scoped scan must not retire findings in files it never opened.
+    scope = result.scoped_to or list(config.include) or ["."]
     result.merge = store.merge(result.findings, scanned_paths=scope)
     entry = result.to_dict()
     store.record_scan(entry)
