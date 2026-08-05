@@ -141,6 +141,41 @@ def sample_block_lines(lines: Sequence[str], language: Optional[str]) -> set:
     return inside
 
 
+_TRIPLE = re.compile(r"(\"\"\"|''')")
+
+
+def heredoc_lines(lines: Sequence[str], language: Optional[str]) -> set:
+    """Line numbers inside a multi-line string literal.
+
+    Python docstrings and test fixtures routinely quote vulnerable code as data:
+    a module-level VULNERABLE = <triple-quoted block> containing an f-string SQL
+    query is a fixture, not a call. `skip_in_strings` already handles the
+    single-line case; this extends it across the block, which is what stops this
+    tool from reporting its own test suite.
+    """
+    if language not in {"python", "ruby"}:
+        return set()
+    inside: set = set()
+    delimiter: Optional[str] = None
+    for index, line in enumerate(lines, start=1):
+        position = 0
+        opened_here = delimiter is not None
+        while True:
+            match = _TRIPLE.search(line, position)
+            if match is None:
+                break
+            token = match.group(1)
+            if delimiter is None:
+                delimiter = token
+                opened_here = True
+            elif token == delimiter:
+                delimiter = None
+            position = match.end()
+        if opened_here or delimiter is not None:
+            inside.add(index)
+    return inside
+
+
 def is_comment_line(line: str, language: Optional[str]) -> bool:
     stripped = line.strip()
     if not stripped:
@@ -196,6 +231,7 @@ class PatternScanner(Scanner):
             return
         counts: Dict[str, int] = {}
         samples = sample_block_lines(lines, source.language)
+        heredocs = heredoc_lines(lines, source.language)
         neighbours = neighbourhood_view(lines, source.language)
 
         for index, line in enumerate(lines):
@@ -216,6 +252,8 @@ class PatternScanner(Scanner):
                 if rule.not_pattern and rule.not_pattern.search(line):
                     continue
                 if rule.skip_in_strings:
+                    if (index + 1) in heredocs:
+                        continue
                     if spans is None:
                         spans = string_spans(line)
                     if inside_string(spans, match.start()):
