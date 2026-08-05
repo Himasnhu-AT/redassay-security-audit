@@ -106,6 +106,41 @@ def inside_string(spans: Sequence[Tuple[int, int]], index: int) -> bool:
     return any(start < index < end - 1 for start, end in spans)
 
 
+MARKUP_LANGUAGES = {"html", "markdown", "vue", "svelte", "xml"}
+_SAMPLE_OPEN = re.compile(r"<(pre|code|samp|xmp)\b", re.IGNORECASE)
+_SAMPLE_CLOSE = re.compile(r"</(pre|code|samp|xmp)\s*>", re.IGNORECASE)
+_FENCE = re.compile(r"^\s*(```|~~~)")
+
+
+def sample_block_lines(lines: Sequence[str], language: Optional[str]) -> set:
+    """Line numbers (1-indexed) inside a documentation sample.
+
+    A tutorial page that *documents* `eval(req.body.x)` inside a <pre> block is
+    not a vulnerable application - it is a description of one. Real projects hit
+    this constantly (security training material, framework docs, changelogs), and
+    reporting it makes every finding in the file suspect.
+    """
+    if language not in MARKUP_LANGUAGES:
+        return set()
+    inside: set = set()
+    depth = 0
+    fenced = False
+    for index, line in enumerate(lines, start=1):
+        if language == "markdown" and _FENCE.match(line):
+            fenced = not fenced
+            inside.add(index)
+            continue
+        if fenced:
+            inside.add(index)
+            continue
+        opens = len(_SAMPLE_OPEN.findall(line))
+        closes = len(_SAMPLE_CLOSE.findall(line))
+        if depth > 0 or opens:
+            inside.add(index)
+        depth = max(0, depth + opens - closes)
+    return inside
+
+
 def is_comment_line(line: str, language: Optional[str]) -> bool:
     stripped = line.strip()
     if not stripped:
@@ -120,6 +155,17 @@ def _window(lines: Sequence[str], index: int, radius: int) -> str:
     start = max(0, index - radius)
     end = min(len(lines), index + radius + 1)
     return "\n".join(lines[start:end])
+
+
+def neighbourhood_view(lines: Sequence[str], language: Optional[str]) -> List[str]:
+    """The lines a proximity check is allowed to see.
+
+    Comment lines are blanked. Otherwise a commented-out `shell=True` two lines
+    above a safe call satisfies the rule's `nearby` requirement, and the rule
+    fires on code that is fine - which is how a proximity guard turns into a
+    proximity false positive.
+    """
+    return ["" if is_comment_line(line, language) else line for line in lines]
 
 
 @register
@@ -149,9 +195,13 @@ class PatternScanner(Scanner):
         if not applicable:
             return
         counts: Dict[str, int] = {}
+        samples = sample_block_lines(lines, source.language)
+        neighbours = neighbourhood_view(lines, source.language)
 
         for index, line in enumerate(lines):
             if len(line) > 2000:          # minified or generated; nothing useful here
+                continue
+            if (index + 1) in samples:
                 continue
             comment = is_comment_line(line, source.language)
             spans: Optional[List[Tuple[int, int]]] = None
@@ -171,7 +221,7 @@ class PatternScanner(Scanner):
                     if inside_string(spans, match.start()):
                         continue
                 if rule.nearby or rule.nearby_absent:
-                    neighbourhood = _window(lines, index, rule.nearby_window)
+                    neighbourhood = _window(neighbours, index, rule.nearby_window)
                     if rule.nearby and not rule.nearby.search(neighbourhood):
                         continue
                     if rule.nearby_absent and rule.nearby_absent.search(neighbourhood):
