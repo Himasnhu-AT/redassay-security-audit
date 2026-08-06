@@ -222,7 +222,13 @@ def serve(config: Config, open_browser: bool = True, once: bool = False, verbose
 
 
 def _try_open(url: str) -> None:
+    """Opening a browser is a convenience, never a reason to fail the command.
+
+    Headless machines, containers and SSH sessions all make this raise, and the
+    URL has already been printed - so the failure is genuinely not actionable.
+    It is still worth naming rather than swallowing everything.
+    """
     try:
         webbrowser.open(url)
-    except Exception:
+    except (webbrowser.Error, OSError):
         pass
