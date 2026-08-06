@@ -1,0 +1,125 @@
+{
+  "pack": "golang",
+  "defaults": {
+    "tags": [
+      "go"
+    ],
+    "languages": [
+      "go"
+    ]
+  },
+  "rules": [
+    {
+      "id": "go.sql-concat",
+      "title": "SQL query built with fmt.Sprintf or concatenation",
+      "severity": "high",
+      "confidence": "medium",
+      "pattern": "(db|tx|conn)\\.(Query|QueryRow|Exec|QueryContext|ExecContext)\\w*\\s*\\(\\s*([^,)]*,\\s*)?(fmt\\.Sprintf|[\\\"`][^\\\"`]*[\\\"`]\\s*\\+)",
+      "description": "database/sql binds parameters only when you pass them separately. A Sprintf'd query is sent as text.",
+      "remediation": "Use placeholders and pass the values as trailing arguments: db.Query(\"SELECT ... WHERE id = $1\", id).",
+      "cwe": [
+        "CWE-89"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "go.command-exec",
+      "title": "exec.Command with a shell",
+      "severity": "high",
+      "confidence": "medium",
+      "pattern": "exec\\.Command(Context)?\\s*\\(\\s*[\\\"'](sh|bash|zsh|cmd|powershell)[\\\"']\\s*,\\s*[\\\"'](-c|/c)[\\\"']",
+      "description": "Going through a shell reintroduces metacharacter parsing that exec.Command otherwise avoids entirely.",
+      "remediation": "Call the binary directly with its arguments as separate strings.",
+      "cwe": [
+        "CWE-78"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "go.insecure-skip-verify",
+      "title": "TLS InsecureSkipVerify enabled",
+      "severity": "high",
+      "confidence": "high",
+      "pattern": "InsecureSkipVerify\\s*:\\s*true",
+      "description": "The client accepts any certificate, so anyone on the path can impersonate the server.",
+      "remediation": "Leave it false and add the internal CA to RootCAs if needed.",
+      "cwe": [
+        "CWE-295"
+      ],
+      "owasp": [
+        "A02:2021 Cryptographic Failures"
+      ]
+    },
+    {
+      "id": "go.math-rand-secret",
+      "title": "math/rand used for a security value",
+      "severity": "high",
+      "confidence": "medium",
+      "pattern": "rand\\.(Int|Intn|Int31|Int63|Float64|Read|Perm)\\s*\\(",
+      "nearby": "token|secret|key|nonce|salt|session|password|otp|csrf",
+      "nearby_window": 2,
+      "not_pattern": "crypto/rand",
+      "description": "math/rand is a deterministic PRNG. An attacker who sees a few outputs can predict the rest.",
+      "remediation": "Import crypto/rand and use rand.Read.",
+      "cwe": [
+        "CWE-338"
+      ],
+      "owasp": [
+        "A02:2021 Cryptographic Failures"
+      ]
+    },
+    {
+      "id": "go.ignored-error",
+      "title": "Error from a security-relevant call discarded",
+      "severity": "medium",
+      "confidence": "low",
+      "pattern": "_\\s*(,\\s*_\\s*)*[:=]+\\s*\\w*(Verify|Validate|Authenticate|Authorize|Decrypt|CheckPassword|Compare)\\w*\\s*\\(",
+      "description": "Assigning the error to _ means a failed verification proceeds exactly like a successful one.",
+      "remediation": "Check the error and fail closed.",
+      "cwe": [
+        "CWE-252"
+      ],
+      "owasp": [
+        "A04:2021 Insecure Design"
+      ]
+    },
+    {
+      "id": "go.path-join-request",
+      "title": "File path built from request data",
+      "severity": "high",
+      "confidence": "medium",
+      "pattern": "(filepath\\.Join|os\\.Open|os\\.ReadFile|ioutil\\.ReadFile|http\\.ServeFile)\\s*\\(",
+      "nearby": "r\\.URL\\.Query\\(\\)|mux\\.Vars|c\\.Param|r\\.FormValue|r\\.PostFormValue",
+      "nearby_window": 3,
+      "not_pattern": "filepath\\.Clean|http\\.Dir",
+      "description": "filepath.Join cleans the path but does not confine it: a leading ../ still escapes the base directory.",
+      "remediation": "Join, then check the result still has the base as a prefix - or use http.Dir, which enforces that.",
+      "cwe": [
+        "CWE-22"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    },
+    {
+      "id": "go.gin-debug-mode",
+      "title": "Gin left in debug mode",
+      "severity": "medium",
+      "confidence": "high",
+      "pattern": "gin\\.SetMode\\s*\\(\\s*gin\\.DebugMode\\s*\\)|gin\\.Default\\s*\\(\\s*\\)",
+      "not_pattern": "gin\\.ReleaseMode",
+      "description": "Debug mode logs full request details and prints stack traces to clients.",
+      "remediation": "Call gin.SetMode(gin.ReleaseMode) when not in development.",
+      "cwe": [
+        "CWE-489"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    }
+  ]
+}
