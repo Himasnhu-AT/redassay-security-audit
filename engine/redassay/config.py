@@ -85,19 +85,36 @@ def _parse_toml_section(path: str) -> Dict[str, Any]:
         return {}
     out: Dict[str, Any] = {}
     inside = False
+    pending_key: Optional[str] = None
+    buffer = ""
     with open(path, "r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
             if _TOML_SECTION.match(line):
                 inside = True
                 continue
-            if inside and _TOML_OTHER_SECTION.match(line):
+            if inside and pending_key is None and _TOML_OTHER_SECTION.match(line):
                 break
             if not inside:
                 continue
-            match = _TOML_PAIR.match(line.split("#")[0])
+
+            body = line.split("#")[0]
+            if pending_key is not None:
+                # Continuation of a multi-line array. Comments inside the array
+                # are common and load-bearing - they say why a rule is off.
+                buffer += " " + body.strip()
+                if "]" in body:
+                    out[pending_key] = _coerce_toml_value(buffer.strip())
+                    pending_key = None
+                    buffer = ""
+                continue
+
+            match = _TOML_PAIR.match(body)
             if not match:
                 continue
             key, raw = match.group(1).replace("-", "_"), match.group(2).strip()
+            if raw.startswith("[") and "]" not in raw:
+                pending_key, buffer = key, raw
+                continue
             out[key] = _coerce_toml_value(raw)
     return out
 
