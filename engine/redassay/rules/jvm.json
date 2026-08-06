@@ -1,0 +1,169 @@
+{
+  "pack": "jvm",
+  "defaults": {
+    "tags": [
+      "java"
+    ]
+  },
+  "rules": [
+    {
+      "id": "jvm.runtime-exec",
+      "title": "Runtime.exec() with a built command string",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "java",
+        "kotlin",
+        "scala"
+      ],
+      "pattern": "(Runtime\\.getRuntime\\(\\)\\.exec|ProcessBuilder)\\s*\\(\\s*[^)]*(\\+|String\\.format|\\$\\{)",
+      "description": "The single-string form of exec() is split on whitespace and, on some platforms, handed to a shell. A concatenated command lets the caller add arguments or commands.",
+      "remediation": "Use the String[] overload, or ProcessBuilder with an explicit argument list.",
+      "cwe": [
+        "CWE-78"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "jvm.jdbc-concat",
+      "title": "JDBC statement built by concatenation",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "java",
+        "kotlin",
+        "scala"
+      ],
+      "pattern": "(createStatement\\s*\\(\\s*\\)[\\s\\S]{0,120}?)?execute(Query|Update)?\\s*\\(\\s*\\\"[^\\\"]*\\\"\\s*\\+",
+      "description": "Statement, unlike PreparedStatement, sends the SQL text exactly as assembled. Concatenating a value into it is injection.",
+      "remediation": "Use PreparedStatement with ? placeholders and setX() binding.",
+      "cwe": [
+        "CWE-89"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "jvm.spel-expression",
+      "title": "Spring expression parsed from a runtime string",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "java",
+        "kotlin"
+      ],
+      "pattern": "(SpelExpressionParser|ExpressionParser)[\\s\\S]{0,120}?parseExpression\\s*\\(\\s*(?![\\\"'])",
+      "description": "SpEL evaluates against the application context and can reach arbitrary beans and, through them, arbitrary code.",
+      "remediation": "Never parse an expression built from input. Use a fixed template with a restricted EvaluationContext if you must.",
+      "cwe": [
+        "CWE-917"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "jvm.trust-all-certs",
+      "title": "TrustManager that accepts every certificate",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "java",
+        "kotlin",
+        "scala"
+      ],
+      "pattern": "(checkServerTrusted\\s*\\([^)]*\\)\\s*\\{\\s*\\}|X509TrustManager\\s*\\(\\s*\\)\\s*\\{[\\s\\S]{0,200}?return\\s+null|ALLOW_ALL_HOSTNAME_VERIFIER|NoopHostnameVerifier)",
+      "description": "An empty checkServerTrusted, or a hostname verifier that always returns true, removes TLS authentication entirely.",
+      "remediation": "Use the platform trust store. For an internal CA, load it into a KeyStore rather than disabling verification.",
+      "cwe": [
+        "CWE-295"
+      ],
+      "owasp": [
+        "A02:2021 Cryptographic Failures"
+      ]
+    },
+    {
+      "id": "jvm.xxe-factory",
+      "title": "XML factory created without disabling DTDs",
+      "severity": "high",
+      "confidence": "low",
+      "languages": [
+        "java",
+        "kotlin",
+        "scala"
+      ],
+      "pattern": "(DocumentBuilderFactory|SAXParserFactory|XMLInputFactory|TransformerFactory)\\.newInstance\\s*\\(",
+      "nearby_absent": "(disallow-doctype-decl|FEATURE_SECURE_PROCESSING|setExpandEntityReferences\\s*\\(\\s*false|IS_SUPPORTING_EXTERNAL_ENTITIES|ACCESS_EXTERNAL_DTD)",
+      "nearby_window": 6,
+      "description": "Java's XML factories resolve external entities by default, so a crafted document reads local files and makes outbound requests as the server.",
+      "remediation": "Set the feature http://apache.org/xml/features/disallow-doctype-decl to true immediately after newInstance().",
+      "cwe": [
+        "CWE-611"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "jvm.weak-cipher-getinstance",
+      "title": "Cipher.getInstance with a weak transformation",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "java",
+        "kotlin",
+        "scala"
+      ],
+      "pattern": "Cipher\\.getInstance\\s*\\(\\s*[\\\"'](DES|DESede|RC2|RC4|Blowfish|AES/ECB|AES(?!/))",
+      "description": "The transformation string names a broken cipher or an unauthenticated mode. AES with no mode defaults to ECB.",
+      "remediation": "Use \"AES/GCM/NoPadding\" with a unique 12-byte nonce per message.",
+      "cwe": [
+        "CWE-327"
+      ],
+      "owasp": [
+        "A02:2021 Cryptographic Failures"
+      ]
+    },
+    {
+      "id": "jvm.spring-permitall",
+      "title": "Spring Security rule permits everything",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "java",
+        "kotlin"
+      ],
+      "pattern": "antMatchers\\s*\\(\\s*[\\\"']/\\*\\*[\\\"']\\s*\\)\\s*\\.permitAll|requestMatchers\\s*\\([^)]*\\)\\s*\\.permitAll\\s*\\(\\s*\\)\\s*\\.anyRequest",
+      "description": "A permitAll on /** makes every later rule unreachable - Spring evaluates matchers in order and the first match wins.",
+      "remediation": "Order matchers most-specific first and end with anyRequest().authenticated().",
+      "cwe": [
+        "CWE-862"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    },
+    {
+      "id": "jvm.csrf-disabled",
+      "title": "Spring Security CSRF protection disabled",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "java",
+        "kotlin"
+      ],
+      "pattern": "\\.csrf\\s*\\(\\s*\\)\\s*\\.disable\\s*\\(|csrf\\s*\\(\\s*(AbstractHttpConfigurer::disable|c\\s*->\\s*c\\.disable)",
+      "description": "Disabling CSRF on a cookie-authenticated application lets a third-party page make state-changing requests as the logged-in user.",
+      "remediation": "Keep CSRF on. For a stateless token API, it is genuinely unnecessary - document that the app never authenticates by cookie.",
+      "cwe": [
+        "CWE-352"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    }
+  ]
+}
