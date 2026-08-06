@@ -87,7 +87,17 @@ def cmd_scan(args: argparse.Namespace) -> int:
         _out(f"Scanning {config.root}")
 
     store = Store.open(config.root)
-    result = engine.scan_and_merge(config, progress=progress, store=store)
+    try:
+        result = engine.scan_and_merge(
+            config, progress=progress, store=store, since=args.since, blame=args.blame
+        )
+    except ValueError as exc:
+        _err(f"error: {exc}")
+        return EXIT_ERROR
+
+    if args.new_only:
+        known = baseline_ids(config.root)
+        result.findings = [f for f in result.findings if f.id not in known]
 
     if args.json:
         _emit_json({
@@ -100,6 +110,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
                                  show_remediation=args.verbose))
         _out("")
         _out(f"{len(result.findings)} findings   {report_mod.summary_line(result.findings, _color_enabled(args))}")
+        if args.since:
+            _out(f"scope: {len(result.scoped_to)} files changed since {args.since}")
         if result.merge:
             _out(f"store: {result.merge.summary()}")
         if result.errors:
@@ -439,6 +451,65 @@ def cmd_rules(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+BASELINE_FILE = "baseline.json"
+
+
+def baseline_path(root: str) -> str:
+    return os.path.join(os.path.abspath(root), ".redassay", BASELINE_FILE)
+
+
+def baseline_ids(root: str) -> set:
+    try:
+        with open(baseline_path(root), "r", encoding="utf-8") as handle:
+            return set(json.load(handle).get("ids") or [])
+    except (OSError, json.JSONDecodeError):
+        return set()
+
+
+def cmd_baseline(args: argparse.Namespace) -> int:
+    """Freeze what exists today so a gate only fails on what gets added.
+
+    The alternative - demanding a team fix four hundred pre-existing findings
+    before the check goes green - is how security tooling gets switched off.
+    """
+    store = _require_store(args.root)
+    if store is None:
+        return EXIT_ERROR
+
+    if args.show:
+        known = baseline_ids(args.root)
+        if args.json:
+            _emit_json({"ids": sorted(known), "count": len(known)})
+        else:
+            _out(f"{len(known)} findings in the baseline")
+        return EXIT_OK
+
+    if args.clear:
+        try:
+            os.unlink(baseline_path(args.root))
+            _out("baseline cleared")
+        except FileNotFoundError:
+            _out("no baseline to clear")
+        return EXIT_OK
+
+    findings = store.query(status=list(models.ACTIONABLE))
+    payload = {
+        "created_at": models.utcnow(),
+        "count": len(findings),
+        "ids": sorted(f.id for f in findings),
+    }
+    os.makedirs(os.path.dirname(baseline_path(args.root)), exist_ok=True)
+    with open(baseline_path(args.root), "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
+        handle.write("\n")
+    if args.json:
+        _emit_json(payload)
+    else:
+        _out(f"baselined {len(findings)} open findings")
+        _out("future scans with --new-only will report only what is added after this point")
+    return EXIT_OK
+
+
 def cmd_suppress(args: argparse.Namespace) -> int:
     store = _require_store(args.root)
     if store is None:
@@ -511,6 +582,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--scanner", action="append", help="run only this scanner (repeatable)")
     p.add_argument("--skip-scanner", action="append", help="disable a scanner (repeatable)")
     p.add_argument("--fail-on", default=None, choices=sev.ORDER, help="exit 1 if anything at this level is open")
+    p.add_argument("--since", default=None, metavar="REF",
+                   help="only scan files that differ from this git ref (e.g. origin/main)")
+    p.add_argument("--blame", action="store_true", help="tag findings with the commit and author that last touched the line")
+    p.add_argument("--new-only", action="store_true",
+                   help="report only findings absent from the baseline")
     p.add_argument("--limit", type=int, default=40)
     p.add_argument("--quiet", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true", help="include remediation text")
@@ -611,6 +687,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("rules", help="list loaded rules", parents=[common])
     p.add_argument("--pack", default=None)
     p.set_defaults(func=cmd_rules)
+
+    p = sub.add_parser("baseline", help="freeze today's findings so gates only fail on new ones", parents=[common])
+    p.add_argument("--show", action="store_true")
+    p.add_argument("--clear", action="store_true")
+    p.set_defaults(func=cmd_baseline)
 
     p = sub.add_parser("suppress", help="stop reporting a rule for a path", parents=[common])
     p.add_argument("rule")
