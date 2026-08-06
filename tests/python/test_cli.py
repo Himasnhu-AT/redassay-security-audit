@@ -335,3 +335,81 @@ class ErrorHandlingTest(CliTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GitScopedScanTest(CliTestCase):
+    def _init_repo(self):
+        import subprocess
+        for args in (["init", "-q", "-b", "main"],
+                     ["config", "user.email", "t@example.invalid"],
+                     ["config", "user.name", "T"],
+                     ["config", "commit.gpgsign", "false"]):
+            subprocess.run(["git", *args], cwd=self.root, capture_output=True, check=False)
+
+    def _commit(self, message):
+        import subprocess
+        subprocess.run(["git", "add", "-A"], cwd=self.root, capture_output=True, check=False)
+        subprocess.run(["git", "commit", "-q", "-m", message], cwd=self.root, capture_output=True, check=False)
+
+    def test_since_reports_the_scope(self):
+        self._init_repo()
+        self.write("old.py", VULNERABLE)
+        self._commit("old")
+        self.write("new.py", VULNERABLE)
+        code, out, _ = self.run_cli("scan", "--since", "HEAD")
+        self.assertEqual(code, 0)
+        self.assertIn("1 files changed since HEAD", out)
+
+    def test_a_bad_ref_is_an_error_not_a_full_scan(self):
+        self._init_repo()
+        self.write("app.py", VULNERABLE)
+        code, _, err = self.run_cli("scan", "--quiet", "--since", "no-such-ref")
+        self.assertEqual(code, 2)
+        self.assertIn("cannot diff", err)
+
+    def test_blame_adds_commit_tags(self):
+        self._init_repo()
+        self.write("app.py", VULNERABLE)
+        self._commit("add app")
+        payload = self.run_json("scan", "--blame")
+        tags = [t for f in payload["findings"] for t in f["tags"]]
+        self.assertTrue(any(t.startswith("commit:") for t in tags))
+
+
+class BaselineTest(CliTestCase):
+    def test_baseline_then_new_only_reports_nothing(self):
+        self.seed()
+        code, out, _ = self.run_cli("baseline")
+        self.assertEqual(code, 0)
+        self.assertIn("baselined", out)
+        payload = self.run_json("scan", "--new-only")
+        self.assertEqual(payload["findings"], [])
+
+    def test_a_new_finding_still_reports(self):
+        self.seed()
+        self.run_cli("baseline")
+        self.write("extra.py", "import os\nos.system(other_input)\n")
+        payload = self.run_json("scan", "--new-only")
+        self.assertTrue(payload["findings"])
+        self.assertTrue(all(f["location"]["path"] == "extra.py" for f in payload["findings"]))
+
+    def test_show(self):
+        self.seed()
+        self.run_cli("baseline")
+        payload = self.run_json("baseline", "--show")
+        self.assertGreater(payload["count"], 0)
+
+    def test_clear(self):
+        self.seed()
+        self.run_cli("baseline")
+        self.run_cli("baseline", "--clear")
+        self.assertEqual(self.run_json("baseline", "--show")["count"], 0)
+
+    def test_new_only_without_a_baseline_reports_everything(self):
+        self.seed()
+        self.assertTrue(self.run_json("scan", "--new-only")["findings"])
+
+    def test_fail_on_combines_with_new_only_for_a_ratchet(self):
+        self.seed()
+        self.run_cli("baseline")
+        self.assertEqual(self.run_cli("scan", "--quiet", "--new-only", "--fail-on", "critical")[0], 0)
