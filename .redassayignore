@@ -1,7 +1,15 @@
-# redassay scanning redassay finds its own rule text. The rule packs and the
-# scanner modules are full of vulnerability patterns by construction - that is
-# what they are - so they are excluded from self-scans.
+# redassay scanning redassay finds its own vocabulary. These paths exist to
+# contain vulnerability patterns, so scanning them produces noise and nothing
+# else.
+
+# Rule packs and scanners: vulnerability patterns are the payload.
 engine/redassay/rules/
 engine/redassay/scanners/
 engine/redassay/data/
+
+# The test corpus: every scanner test asserts on a vulnerable sample, and the
+# false-positive suite deliberately contains both safe and unsafe forms.
+tests/
+
+# Deliberately vulnerable applications, used to prove detection still works.
 fixtures/
