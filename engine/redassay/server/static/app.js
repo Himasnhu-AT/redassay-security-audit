@@ -45,6 +45,7 @@ async function refresh({ force = false } = {}) {
   const data = await api("/api/state");
   const signature = JSON.stringify([data.stats, data.queue.stats, data.findings.length,
     data.findings.map((f) => f.status + f.comments.length).join("")]);
+  // redassay: ignore crypto.constant-time-compare - a render-skip fingerprint, not a secret
   if (!force && signature === state.lastSignature) return;
   state.lastSignature = signature;
   state.findings = data.findings;
@@ -67,6 +68,7 @@ function render() {
 
 function renderHeaderCounts() {
   const counts = countBySeverity(state.findings.filter((f) => f.is_open));
+  // redassay: ignore xss.innerhtml-assignment - severity names are a fixed vocabulary, counts are integers
   el("header-counts").innerHTML = ["critical", "high", "medium", "low", "info"]
     .filter((name) => counts[name])
     .map((name) =>
@@ -77,15 +79,18 @@ function renderHeaderCounts() {
 
 function renderFacets() {
   const severityCounts = countBySeverity(state.findings);
+  // redassay: ignore xss.innerhtml-assignment - chip() interpolates only names from SEVERITY_ORDER and integer counts
   el("facet-severity").innerHTML = ["critical", "high", "medium", "low", "info"]
     .map((name) => chip(name, severityCounts[name] || 0, state.filters.severities.includes(name), "severity"))
     .join("");
 
   const statusCounts = countByStatus(state.findings);
+  // redassay: ignore xss.innerhtml-assignment - STATUS_CHOICES is a module constant
   el("facet-status").innerHTML = STATUS_CHOICES
     .map((name) => chip(name, statusCounts[name] || 0, state.filters.statuses.includes(name), "status"))
     .join("");
 
+  // redassay: ignore xss.innerhtml-assignment - SORT_CHOICES is a module constant
   el("facet-sort").innerHTML = SORT_CHOICES
     .map(([value, label]) =>
       `<button class="chip ${state.filters.sort === value ? "on" : ""}" data-facet="sort" data-value="${value}">${label}</button>`
