@@ -1,0 +1,178 @@
+{
+  "pack": "php-ruby",
+  "defaults": {
+    "tags": [
+      "php",
+      "ruby"
+    ]
+  },
+  "rules": [
+    {
+      "id": "php.file-inclusion-superglobal",
+      "title": "File path taken directly from a superglobal",
+      "severity": "critical",
+      "confidence": "high",
+      "languages": [
+        "php"
+      ],
+      "pattern": "\\b(include|require|include_once|require_once|file_get_contents|fopen|readfile|unlink)\\s*\\(?\\s*[^;)]*\\$_(GET|POST|REQUEST|COOKIE)",
+      "description": "A request value reaching a file operation is local file inclusion, and with include it is code execution - PHP will parse and run whatever it reads.",
+      "remediation": "Map the input to a fixed allowlist of filenames. Never build the path from input.",
+      "cwe": [
+        "CWE-98"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "php.sql-superglobal",
+      "title": "Query built from a superglobal",
+      "severity": "critical",
+      "confidence": "high",
+      "languages": [
+        "php"
+      ],
+      "pattern": "(mysql_query|mysqli_query|->query|->exec)\\s*\\(\\s*[^)]*\\$_(GET|POST|REQUEST|COOKIE)",
+      "description": "Request data interpolated into SQL with no binding.",
+      "remediation": "Use PDO prepared statements with bound parameters.",
+      "cwe": [
+        "CWE-89"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "php.weak-comparison-hash",
+      "title": "Loose comparison used on a hash or token",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "php"
+      ],
+      "pattern": "==\\s*(md5|sha1|hash|crypt)\\s*\\(|\\b(md5|sha1|hash)\\s*\\([^)]*\\)\\s*==",
+      "not_pattern": "===|hash_equals",
+      "description": "PHP's == performs type juggling: two hashes that both start '0e' followed by digits compare equal as scientific notation, which is a documented authentication bypass.",
+      "remediation": "Use hash_equals(), which is both strict and constant time.",
+      "cwe": [
+        "CWE-697"
+      ],
+      "owasp": [
+        "A07:2021 Identification and Authentication Failures"
+      ]
+    },
+    {
+      "id": "php.extract-superglobal",
+      "title": "extract() on request data",
+      "severity": "high",
+      "confidence": "high",
+      "languages": [
+        "php"
+      ],
+      "pattern": "\\bextract\\s*\\(\\s*\\$_(GET|POST|REQUEST|COOKIE)",
+      "description": "extract() creates local variables named by the request, so a caller can overwrite any variable in scope - including one already checked.",
+      "remediation": "Read the specific keys you expect.",
+      "cwe": [
+        "CWE-621"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "php.upload-no-validation",
+      "title": "Uploaded file moved without validating its type",
+      "severity": "high",
+      "confidence": "low",
+      "languages": [
+        "php"
+      ],
+      "pattern": "move_uploaded_file\\s*\\(",
+      "nearby_absent": "(finfo|mime_content_type|getimagesize|pathinfo|in_array|allowed)",
+      "nearby_window": 6,
+      "description": "An upload written into a web-served directory with an attacker-chosen extension becomes a script the server will execute.",
+      "remediation": "Validate the real content type, generate the stored filename yourself, and store outside the web root.",
+      "cwe": [
+        "CWE-434"
+      ],
+      "owasp": [
+        "A04:2021 Insecure Design"
+      ]
+    },
+    {
+      "id": "ruby.send-dynamic",
+      "title": "send() with a runtime method name",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "ruby"
+      ],
+      "pattern": "\\.(send|public_send|__send__)\\s*\\(\\s*(params\\[|request\\.|@?\\w+\\s*\\))",
+      "not_pattern": "send\\s*\\(\\s*:",
+      "description": "send() can call any method on the object, including private ones. A method name from the request lets the caller choose what runs.",
+      "remediation": "Map the input through an explicit allowlist of permitted method names.",
+      "cwe": [
+        "CWE-470"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "ruby.mass-assignment",
+      "title": "Mass assignment without strong parameters",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "ruby"
+      ],
+      "pattern": "\\.(new|update|update_attributes|create|assign_attributes)\\s*\\(\\s*params\\s*\\[",
+      "not_pattern": "\\.permit|\\.require\\s*\\([^)]*\\)\\.permit",
+      "description": "Passing params straight into a model lets a request set any attribute, including admin flags and foreign keys.",
+      "remediation": "Use strong parameters: params.require(:user).permit(:name, :email).",
+      "cwe": [
+        "CWE-915"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    },
+    {
+      "id": "ruby.constantize-input",
+      "title": "constantize/const_get on request data",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "ruby"
+      ],
+      "pattern": "(params\\s*\\[[^\\]]*\\]|request\\.\\w+)\\s*\\.\\s*(constantize|safe_constantize)|(constantize|const_get|safe_constantize)\\s*\\(\\s*(params\\s*\\[|request\\.)",
+      "description": "Resolving a class name from input lets the caller instantiate arbitrary classes, which is the first half of most Ruby RCE chains.",
+      "remediation": "Look the name up in a fixed hash of permitted classes.",
+      "cwe": [
+        "CWE-470"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    },
+    {
+      "id": "ruby.render-inline",
+      "title": "render inline: with interpolation",
+      "severity": "critical",
+      "confidence": "medium",
+      "languages": [
+        "ruby"
+      ],
+      "pattern": "render\\s+(inline|text)\\s*:\\s*[\\\"'][^\\\"']*#\\{",
+      "description": "ERB interpolation inside a rendered string is template injection, which reaches Ruby objects and therefore code execution.",
+      "remediation": "Render a template file and pass the value as a local.",
+      "cwe": [
+        "CWE-1336"
+      ],
+      "owasp": [
+        "A03:2021 Injection"
+      ]
+    }
+  ]
+}
