@@ -1,0 +1,203 @@
+{
+  "pack": "api-mobile",
+  "defaults": {
+    "tags": [
+      "api"
+    ]
+  },
+  "rules": [
+    {
+      "id": "api.graphql-introspection-enabled",
+      "title": "GraphQL introspection enabled in production config",
+      "severity": "low",
+      "confidence": "low",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "go",
+        "ruby",
+        "java"
+      ],
+      "pattern": "introspection\\s*[:=]\\s*(true|True)|__schema",
+      "description": "Introspection publishes the full schema, including fields and mutations that are not referenced by any client. It is not a vulnerability on its own, but it turns an unauthenticated endpoint into a map of one.",
+      "remediation": "Disable introspection outside development, and rely on authorization rather than obscurity for the fields that matter.",
+      "cwe": [
+        "CWE-200"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "api.graphql-no-depth-limit",
+      "title": "GraphQL server without a depth or complexity limit",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python"
+      ],
+      "pattern": "(ApolloServer|GraphQLSchema|graphql_sync|strawberry\\.Schema|makeExecutableSchema)\\s*\\(",
+      "nearby_absent": "(depthLimit|createComplexityLimitRule|validationRules|max_depth|QueryDepthLimiter|costAnalysis)",
+      "nearby_window": 6,
+      "description": "A recursive query against a cyclic schema expands exponentially. Without a depth or cost limit a single request can exhaust the server.",
+      "remediation": "Add graphql-depth-limit or a cost analysis rule to validationRules.",
+      "cwe": [
+        "CWE-770"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "api.mass-assignment-spread",
+      "title": "Request body spread into a model update",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "pattern": "(\\{\\s*\\.\\.\\.\\s*req\\.body\\s*\\}|Object\\.assign\\s*\\(\\s*\\w+\\s*,\\s*req\\.body)",
+      "description": "Spreading the body lets a client set any field on the document, including role, balance or ownership.",
+      "remediation": "Pick the fields explicitly, or validate against a schema that strips unknown keys.",
+      "cwe": [
+        "CWE-915"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    },
+    {
+      "id": "api.no-rate-limit-auth",
+      "title": "Authentication endpoint with no rate limiting nearby",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python"
+      ],
+      "pattern": "(app|router)\\.(post)\\s*\\(\\s*[\\\"'`][^\\\"'`]*(login|signin|auth|token|password|otp|verify)[^\\\"'`]*[\\\"'`]",
+      "nearby_absent": "(rateLimit|rate_limit|limiter|throttle|slowDown|Limiter)",
+      "nearby_window": 6,
+      "description": "Without throttling, credential stuffing and OTP brute force are limited only by network bandwidth.",
+      "remediation": "Apply a rate limiter keyed on the account and on the source address, and back off exponentially on failures.",
+      "cwe": [
+        "CWE-307"
+      ],
+      "owasp": [
+        "A07:2021 Identification and Authentication Failures"
+      ]
+    },
+    {
+      "id": "api.verbose-error-response",
+      "title": "Exception detail returned to the client",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "java",
+        "go",
+        "php",
+        "ruby"
+      ],
+      "pattern": "(res\\.(status\\s*\\(\\s*\\d+\\s*\\)\\s*\\.)?(json|send)\\s*\\(\\s*\\{?[^)]*\\b(err|error|e)\\.(stack|message|toString)|jsonify\\s*\\(\\s*\\{[^}]*str\\s*\\(\\s*e\\s*\\)|return\\s+\\{[\\\"']error[\\\"']\\s*:\\s*str\\s*\\(\\s*e)",
+      "description": "Stack traces and exception text leak file paths, library versions, SQL fragments and sometimes credentials from connection strings.",
+      "remediation": "Log the detail server-side with a correlation id, return the id and a generic message.",
+      "cwe": [
+        "CWE-209"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "api.jwt-long-expiry",
+      "title": "JWT issued with a very long or absent expiry",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "go",
+        "java",
+        "ruby"
+      ],
+      "pattern": "expiresIn\\s*:\\s*[\\\"']?(\\d{3,}d|\\d{5,}[hm]|never)|exp[\\\"']?\\s*[:=][^,}\\n]*\\+\\s*(31536000|2592000|604800\\s*\\*\\s*\\d{2,})",
+      "description": "A token that lives for months cannot be revoked by expiry, so a leaked one stays useful for months.",
+      "remediation": "Keep access tokens short (minutes) and use a refresh token you can revoke server-side.",
+      "cwe": [
+        "CWE-613"
+      ],
+      "owasp": [
+        "A07:2021 Identification and Authentication Failures"
+      ]
+    },
+    {
+      "id": "api.websocket-no-origin-check",
+      "title": "WebSocket server without an origin check",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python"
+      ],
+      "pattern": "new\\s+(WebSocket\\.Server|WebSocketServer)\\s*\\(|websockets\\.serve\\s*\\(",
+      "nearby_absent": "(verifyClient|origin|checkOrigin|handleProtocols|allowed_origins)",
+      "nearby_window": 6,
+      "description": "WebSocket handshakes are not covered by the same-origin policy. Without an origin check, any page can open an authenticated socket using the visitor's cookies - cross-site WebSocket hijacking.",
+      "remediation": "Validate the Origin header against an allowlist in verifyClient, and authenticate with a token rather than a cookie.",
+      "cwe": [
+        "CWE-346"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    },
+    {
+      "id": "mobile.android-exported-component",
+      "title": "Android component exported without a permission",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "xml"
+      ],
+      "pattern": "android:exported\\s*=\\s*[\\\"']true[\\\"']",
+      "nearby_absent": "android:permission",
+      "nearby_window": 4,
+      "description": "An exported component with no permission can be started by any other app on the device.",
+      "remediation": "Set exported=\"false\", or require a signature-level permission.",
+      "cwe": [
+        "CWE-926"
+      ],
+      "owasp": [
+        "A01:2021 Broken Access Control"
+      ]
+    },
+    {
+      "id": "mobile.cleartext-traffic",
+      "title": "Cleartext HTTP traffic permitted",
+      "severity": "medium",
+      "confidence": "high",
+      "languages": [
+        "xml"
+      ],
+      "pattern": "android:usesCleartextTraffic\\s*=\\s*[\\\"']true[\\\"']|cleartextTrafficPermitted\\s*=\\s*[\\\"']true[\\\"']|NSAllowsArbitraryLoads",
+      "description": "Allowing cleartext means any network the device joins can read and rewrite the app's traffic.",
+      "remediation": "Remove the flag and fix the endpoints that still need HTTP.",
+      "cwe": [
+        "CWE-319"
+      ],
+      "owasp": [
+        "A02:2021 Cryptographic Failures"
+      ]
+    }
+  ]
+}
