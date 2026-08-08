@@ -27,6 +27,7 @@ SCANNER_PRECEDENCE = {
     "secrets": 75,
     "configs": 60,
     "pattern": 40,
+    "configs-language": 45,
     "claude": 120,          # a model-verified finding carries the most context
 }
 
@@ -78,6 +79,28 @@ EQUIVALENT = {
     "ssrf.open-redirect": "open-redirect",
     "config.curl-pipe-shell": "curl-pipe",
     "ci.curl-pipe-shell": "curl-pipe",
+    "crypto.ecb-mode": "weak-cipher",
+    "jvm.weak-cipher-getinstance": "weak-cipher",
+    "crypto.des-rc4-3des": "weak-cipher",
+    "config.csrf-disabled": "csrf-disabled",
+    "jvm.csrf-disabled": "csrf-disabled",
+    "go.insecure-skip-verify": "tls-verify-off",
+    "jvm.trust-all-certs": "tls-verify-off",
+    "go.sql-concat": "sql-injection",
+    "jvm.jdbc-concat": "sql-injection",
+    "php.sql-superglobal": "sql-injection",
+    "jvm.runtime-exec": "command-injection",
+    "cmd.php-exec": "command-injection",
+    "go.command-exec": "command-injection",
+    "cmd.ruby-backtick": "command-injection",
+    "php.file-inclusion-superglobal": "file-inclusion",
+    "code.php-eval-include": "file-inclusion",
+    "go.math-rand-secret": "weak-random",
+    "go.path-join-request": "path-traversal",
+    "ruby.render-inline": "template-injection",
+    "inject.ssti-render-string": "template-injection",
+    "api.mass-assignment-spread": "mass-assignment",
+    "ruby.mass-assignment": "mass-assignment",
 }
 
 
