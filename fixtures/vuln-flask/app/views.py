@@ -13,7 +13,7 @@ from flask import Flask, redirect, request, render_template_string, send_file
 
 app = Flask(__name__)
 
-# VULN: config.django-secret-key-literal / secret.hardcoded-assignment
+# VULN: secret.hardcoded-assignment
 API_TOKEN = "s3rv1ce_t0k3n_9fA2xQ7bLmZ4pR8wN6yT1uV3cE5hJ0kD"
 
 
