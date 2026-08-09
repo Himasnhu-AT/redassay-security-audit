@@ -1,0 +1,65 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Confirm the engine has no dependencies
+        run: python3 tools/check_stdlib_only.py
+      - run: python3 -m unittest discover -s tests/python -t . -p 'test_*.py' -v
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node --test tests/js/*.test.js
+
+  self-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Scan redassay with redassay
+        run: python3 engine/redassay_cli.py scan --fail-on medium
+      - name: Detection has not regressed on the fixtures
+        run: |
+          set -euo pipefail
+          for fixture in vuln-flask vuln-node vuln-polyglot; do
+            count=$(python3 engine/redassay_cli.py --root "fixtures/$fixture" scan --quiet --json \
+                    | python3 -c 'import json,sys; print(json.load(sys.stdin)["scan"]["total"])')
+            echo "$fixture: $count findings"
+            if [ "$count" -lt 15 ]; then
+              echo "detection regressed on $fixture"
+              exit 1
+            fi
+          done
+      - name: The clean fixture stays clean
+        run: |
+          set -euo pipefail
+          loud=$(python3 engine/redassay_cli.py --root fixtures/clean-app scan --quiet --json \
+                 | python3 -c 'import json,sys; print(sum(1 for f in json.load(sys.stdin)["findings"] if f["confidence"] == "high"))')
+          if [ "$loud" -ne 0 ]; then
+            echo "$loud high-confidence findings on the control fixture"
+            exit 1
+          fi
