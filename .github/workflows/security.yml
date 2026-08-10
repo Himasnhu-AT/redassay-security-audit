@@ -1,0 +1,50 @@
+name: security
+
+on:
+  pull_request:
+  schedule:
+    # Weekly, so a new advisory in the bundled database is noticed without a push.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Needed for --since to have something to diff against.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Scan the changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          python3 engine/redassay_cli.py scan \
+            --since "origin/${BASE_REF}" \
+            --fail-on high \
+            --blame
+
+      - name: Full scan
+        if: github.event_name != 'pull_request'
+        run: python3 engine/redassay_cli.py scan --fail-on high
+
+      - name: Write SARIF
+        if: always()
+        run: python3 engine/redassay_cli.py report --format sarif -o redassay.sarif
+
+      - name: Upload to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: redassay.sarif
+          category: redassay
