@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import sys
 import unittest
 
 from . import _bootstrap  # noqa: F401
@@ -188,3 +189,16 @@ class PatternScannerBehaviourTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GeneratedDocsTest(unittest.TestCase):
+    """The rule catalogue is generated. A stale one is a lie about what runs."""
+
+    def test_docs_are_current(self):
+        import subprocess
+        script = os.path.join(_bootstrap.ROOT, "tools", "generate_rule_docs.py")
+        result = subprocess.run(
+            [sys.executable, script, "--check"],
+            capture_output=True, text=True, cwd=_bootstrap.ROOT, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
