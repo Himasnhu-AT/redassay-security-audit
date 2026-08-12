@@ -60,7 +60,7 @@ Requires Python 3.9+. Node is only needed to run the board's own test suite.
 
 ### The board
 
-![the review loop](docs/loop.md)
+The full walkthrough is in [`docs/loop.md`](docs/loop.md).
 
 Three panes: filters on the left, findings in the middle, detail on the right.
 Each finding shows the vulnerability, the source around it, the fix, and a place
