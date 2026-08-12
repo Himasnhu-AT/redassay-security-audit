@@ -318,3 +318,65 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; }
   .layout { grid-template-columns: 190px 1fr; }
   .detail-pane { display: none; }
 }
+
+/* --- inline panels ----------------------------------------------------- */
+/* Modal prompts block the page and lose what you typed on a mis-click, so
+   every question the board asks is answered in place. */
+.inline-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.inline-panel[hidden] { display: none; }
+.inline-panel label { font-size: 12.5px; color: var(--text-dim); }
+.inline-panel textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+}
+.inline-panel textarea:focus { outline: none; border-color: var(--accent); }
+.inline-panel .row { display: flex; justify-content: flex-end; gap: 7px; }
+.inline-panel .checkbox {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 12.5px;
+}
+
+/* --- batch bar --------------------------------------------------------- */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  background: rgba(99, 160, 255, 0.08);
+  border-bottom: 1px solid rgba(99, 160, 255, 0.28);
+  font-size: 12.5px;
+}
+.batch-bar[hidden] { display: none; }
+.batch-actions { display: flex; gap: 7px; }
+
+/* A disabled primary button must not look like the main call to action.
+   opacity alone left it reading as available. */
+.btn-primary:disabled,
+.btn-primary[disabled] {
+  background: var(--bg-sunken);
+  border-color: var(--border);
+  color: var(--text-faint);
+  opacity: 1;
+}
+
+/* The detail pane ends in a form; without room for it the submit button sits
+   under the viewport edge. */
+.detail-pane { padding-bottom: 96px; }
