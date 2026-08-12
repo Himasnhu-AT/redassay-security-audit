@@ -65,6 +65,13 @@
       <label class="select-all"><input type="checkbox" id="select-all"> <span id="list-count">0 findings</span></label>
       <span class="selection-note" id="selection-note"></span>
     </div>
+    <div class="batch-bar" id="batch-bar" hidden>
+      <span id="batch-summary"></span>
+      <span class="batch-actions">
+        <button class="btn btn-small" id="batch-cancel" type="button">Clear</button>
+        <button class="btn btn-primary btn-small" id="batch-confirm" type="button">Queue fixes</button>
+      </span>
+    </div>
     <ul class="findings" id="findings"></ul>
     <div class="empty" id="empty" hidden>
       <p>Nothing here.</p>

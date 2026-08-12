@@ -127,6 +127,7 @@ function renderList() {
   fixButton.disabled = chosen === 0;
   fixButton.textContent = chosen ? `Fix ${chosen} selected` : "Fix selected";
 
+  renderBatchBar();
   el("findings").innerHTML = state.visible.map(renderRow).join("");
   if (state.activeId && !state.visible.some((f) => f.id === state.activeId)) {
     state.activeId = null;
@@ -172,6 +173,7 @@ function renderQueuePill() {
 }
 
 async function openFinding(id) {
+  closePanels();
   state.activeId = id;
   renderList();
   try {
@@ -207,6 +209,25 @@ function renderDetail(finding) {
       <button class="btn btn-small btn-danger" data-act="dismiss">Dismiss</button>
       ${finding.status === "dismissed" ? `<button class="btn btn-small" data-act="reopen">Reopen</button>` : ""}
     </div>
+
+    <form class="inline-panel" data-panel="fix" hidden>
+      <label for="fix-note">Anything the fix must preserve? (optional)</label>
+      <textarea id="fix-note" name="note" rows="2" placeholder="Keep the --verbose flag working"></textarea>
+      <div class="row">
+        <button class="btn btn-small" type="button" data-cancel="fix">Cancel</button>
+        <button class="btn btn-primary btn-small" type="submit">Queue the fix</button>
+      </div>
+    </form>
+
+    <form class="inline-panel" data-panel="dismiss" hidden>
+      <label for="dismiss-reason">Why is this not worth fixing?</label>
+      <textarea id="dismiss-reason" name="reason" rows="2" placeholder="The argument is a module constant, never request data"></textarea>
+      <label class="checkbox"><input type="checkbox" name="suppress_rule"> also stop reporting this rule for this file</label>
+      <div class="row">
+        <button class="btn btn-small" type="button" data-cancel="dismiss">Cancel</button>
+        <button class="btn btn-danger btn-small" type="submit">Dismiss</button>
+      </div>
+    </form>
 
     ${finding.description ? `<h3>What it is</h3><p>${escapeHtml(finding.description)}</p>` : ""}
 
@@ -273,23 +294,49 @@ async function act(id, action, body = {}) {
   }
 }
 
-async function requestFix(id) {
-  const note = window.prompt("Anything the fix must preserve? (optional)");
-  if (note === null) return;
+/** Reveal one of the detail pane's inline panels. Modal dialogs (prompt,
+ *  confirm) block the whole page and lose what you typed if you mis-click, so
+ *  the board asks for the note in place instead. */
+function openPanel(name) {
+  for (const panel of document.querySelectorAll("[data-panel]")) {
+    panel.hidden = panel.dataset.panel !== name;
+  }
+  const active = document.querySelector(`[data-panel="${name}"]`);
+  if (active) active.querySelector("textarea").focus();
+}
+
+function closePanels() {
+  for (const panel of document.querySelectorAll("[data-panel]")) panel.hidden = true;
+}
+
+async function submitFix(id, note) {
+  closePanels();
   if (await act(id, "fix", { note })) toast("Queued for the agent");
 }
 
-async function dismiss(id) {
-  const reason = window.prompt("Why is this not worth fixing?");
-  if (reason === null) return;
-  if (await act(id, "dismiss", { reason })) toast("Dismissed");
+async function submitDismiss(id, reason, suppressRule) {
+  if (!reason.trim()) {
+    toast("A reason is required - the next person needs to know why", true);
+    return;
+  }
+  closePanels();
+  if (await act(id, "dismiss", { reason, suppress_rule: suppressRule })) toast("Dismissed");
+}
+
+function renderBatchBar() {
+  const bar = el("batch-bar");
+  const ids = state.selection.toArray();
+  if (!ids.length) {
+    bar.hidden = true;
+    return;
+  }
+  bar.hidden = false;
+  el("batch-summary").textContent = describeBatch(state.findings, ids);
 }
 
 async function fixSelected() {
   const ids = state.selection.toArray();
   if (!ids.length) return;
-  const summary = describeBatch(state.findings, ids);
-  if (!window.confirm(`Queue ${summary} for the agent to fix?`)) return;
   try {
     await api("/api/fix", { method: "POST", body: { finding_ids: ids } });
     state.selection.clear();
@@ -368,26 +415,47 @@ function wire() {
   });
 
   el("btn-fix").addEventListener("click", fixSelected);
+  el("batch-confirm").addEventListener("click", fixSelected);
+  el("batch-cancel").addEventListener("click", () => {
+    state.selection.clear();
+    renderList();
+  });
   el("btn-rescan").addEventListener("click", rescan);
 
   el("detail").addEventListener("click", (event) => {
     const button = event.target.closest("[data-act]");
     if (!button || !state.activeId) return;
     const action = button.dataset.act;
-    if (action === "fix") requestFix(state.activeId);
-    if (action === "dismiss") dismiss(state.activeId);
+    if (action === "fix" || action === "dismiss") openPanel(action);
     if (action === "confirm") act(state.activeId, "status", { status: "confirmed" });
     if (action === "reopen") act(state.activeId, "reopen");
   });
 
+  el("detail").addEventListener("click", (event) => {
+    if (event.target.closest("[data-cancel]")) closePanels();
+  });
+
   el("detail").addEventListener("submit", async (event) => {
-    if (event.target.dataset.form !== "comment") return;
     event.preventDefault();
-    const textarea = event.target.querySelector("textarea");
-    const body = textarea.value.trim();
-    if (!body || !state.activeId) return;
-    textarea.value = "";
-    if (await act(state.activeId, "comment", { body })) toast("Note added");
+    if (!state.activeId) return;
+    const form = event.target;
+    const textarea = form.querySelector("textarea");
+
+    if (form.dataset.form === "comment") {
+      const body = textarea.value.trim();
+      if (!body) return;
+      textarea.value = "";
+      if (await act(state.activeId, "comment", { body })) toast("Note added");
+      return;
+    }
+    if (form.dataset.panel === "fix") {
+      await submitFix(state.activeId, textarea.value.trim());
+      return;
+    }
+    if (form.dataset.panel === "dismiss") {
+      const suppress = form.querySelector("[name=suppress_rule]").checked;
+      await submitDismiss(state.activeId, textarea.value, suppress);
+    }
   });
 
   document.addEventListener("keydown", (event) => {
@@ -397,8 +465,9 @@ function wire() {
       el("search").focus();
       return;
     }
-    if (event.key === "Escape" && typing) {
-      event.target.blur();
+    if (event.key === "Escape") {
+      closePanels();
+      if (typing) event.target.blur();
       return;
     }
     if (typing) return;
@@ -416,9 +485,9 @@ function wire() {
       state.selection.toggle(state.activeId);
       renderList();
     } else if (event.key === "f" && state.activeId) {
-      requestFix(state.activeId);
+      openPanel("fix");
     } else if (event.key === "d" && state.activeId) {
-      dismiss(state.activeId);
+      openPanel("dismiss");
     } else if (event.key === "c" && state.activeId) {
       const textarea = document.querySelector(".comment-form textarea");
       if (textarea) textarea.focus();
