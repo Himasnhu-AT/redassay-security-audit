@@ -1,7 +1,10 @@
 // Board wiring. Everything testable lives in ./lib; this file is the part that
 // needs a DOM, kept thin on purpose.
 
-import { escapeHtml, shortenPath, relativeTime, severitySummary, truncate } from "./lib/format.js";
+import { escapeHtml, relativeTime, severitySummary } from "./lib/format.js";
+import {
+  classification, codeBlock, commentList, findingRow, headerCounts, hotspotRow, severityChip,
+} from "./lib/render.js";
 import { applyFilters, countBySeverity, countByStatus, toggle, DEFAULT_FILTERS } from "./lib/filters.js";
 import { Selection, describeBatch } from "./lib/selection.js";
 
@@ -67,21 +70,15 @@ function render() {
 }
 
 function renderHeaderCounts() {
-  const counts = countBySeverity(state.findings.filter((f) => f.is_open));
-  // redassay: ignore xss.innerhtml-assignment - severity names are a fixed vocabulary, counts are integers
-  el("header-counts").innerHTML = ["critical", "high", "medium", "low", "info"]
-    .filter((name) => counts[name])
-    .map((name) =>
-      `<span class="count"><span class="dot" style="background:var(--${name})"></span>${counts[name]} ${name}</span>`
-    )
-    .join("") || `<span class="count">no open findings</span>`;
+  // redassay: ignore xss.innerhtml-assignment - headerCounts() escapes, see lib/render.js
+  el("header-counts").innerHTML = headerCounts(countBySeverity(state.findings.filter((f) => f.is_open)));
 }
 
 function renderFacets() {
   const severityCounts = countBySeverity(state.findings);
-  // redassay: ignore xss.innerhtml-assignment - chip() interpolates only names from SEVERITY_ORDER and integer counts
+  // redassay: ignore xss.innerhtml-assignment - severityChip() escapes, see lib/render.js
   el("facet-severity").innerHTML = ["critical", "high", "medium", "low", "info"]
-    .map((name) => chip(name, severityCounts[name] || 0, state.filters.severities.includes(name), "severity"))
+    .map((name) => severityChip(name, severityCounts[name] || 0, state.filters.severities.includes(name)))
     .join("");
 
   const statusCounts = countByStatus(state.findings);
@@ -104,13 +101,7 @@ function chip(name, count, active, facet) {
 }
 
 function renderHotspots() {
-  el("hotspots").innerHTML = state.hotspots
-    .map((spot) =>
-      `<li data-path="${escapeHtml(spot.path)}" title="${escapeHtml(spot.path)}">` +
-      `<span>${escapeHtml(shortenPath(spot.path, 24))}</span>` +
-      `<span class="risk">${spot.count}</span></li>`
-    )
-    .join("");
+  el("hotspots").innerHTML = state.hotspots.map(hotspotRow).join("");
 }
 
 function renderList() {
@@ -128,34 +119,16 @@ function renderList() {
   fixButton.textContent = chosen ? `Fix ${chosen} selected` : "Fix selected";
 
   renderBatchBar();
-  el("findings").innerHTML = state.visible.map(renderRow).join("");
+  el("findings").innerHTML = state.visible
+    .map((finding) => findingRow(finding, {
+      active: finding.id === state.activeId,
+      selected: state.selection.has(finding.id),
+    }))
+    .join("");
   if (state.activeId && !state.visible.some((f) => f.id === state.activeId)) {
     state.activeId = null;
     renderDetail(null);
   }
-}
-
-function renderRow(finding) {
-  const path = (finding.location && finding.location.path) || "";
-  const line = (finding.location && finding.location.line) || 0;
-  const classes = [
-    "finding",
-    finding.id === state.activeId ? "active" : "",
-    state.selection.has(finding.id) ? "selected" : "",
-  ].join(" ");
-  return `<li class="${classes}" data-id="${finding.id}">
-    <input type="checkbox" data-check="${finding.id}" ${state.selection.has(finding.id) ? "checked" : ""}>
-    <div>
-      <div class="title">${escapeHtml(finding.title)}</div>
-      <div class="meta">
-        <span class="sev sev-${finding.severity}">${finding.severity}</span>
-        <span class="path" title="${escapeHtml(path)}">${escapeHtml(shortenPath(path, 42))}${line ? ":" + line : ""}</span>
-        <span>${escapeHtml(finding.rule_id)}</span>
-        ${finding.status !== "open" ? `<span class="status-tag status-${finding.status}">${finding.status}</span>` : ""}
-        ${finding.comments.length ? `<span>${finding.comments.length}&nbsp;note${finding.comments.length === 1 ? "" : "s"}</span>` : ""}
-      </div>
-    </div>
-  </li>`;
 }
 
 function renderQueuePill() {
@@ -232,53 +205,19 @@ function renderDetail(finding) {
     ${finding.description ? `<h3>What it is</h3><p>${escapeHtml(finding.description)}</p>` : ""}
 
     <h3>${escapeHtml(loc.path || "")}${loc.line ? ":" + loc.line : ""}</h3>
-    ${renderCode(finding.context, loc.line)}
+    ${codeBlock(finding.context, loc.line)}
 
     ${finding.remediation ? `<h3>How to fix</h3><div class="remediation">${escapeHtml(finding.remediation)}</div>` : ""}
 
-    ${renderReferences(finding)}
+    ${classification(finding)}
 
     <h3>Notes</h3>
-    ${renderComments(finding.comments)}
+    ${commentList(finding.comments)}
     <form class="comment-form" data-form="comment">
       <textarea name="body" placeholder="Why is this a false positive? What should the fix preserve?"></textarea>
       <div class="row"><button class="btn btn-small" type="submit">Add note</button></div>
     </form>
   </div>`;
-}
-
-function renderCode(context, focusLine) {
-  if (!context || !context.lines || !context.lines.length) {
-    return `<p class="muted">Source not available.</p>`;
-  }
-  const rows = context.lines.map((line, index) => {
-    const number = context.start_line + index;
-    const hit = number === focusLine ? " hit" : "";
-    return `<div class="row${hit}"><span class="ln">${number}</span><span class="src">${escapeHtml(line)}</span></div>`;
-  });
-  return `<div class="code">${rows.join("")}</div>`;
-}
-
-function renderReferences(finding) {
-  const tags = [...(finding.cwe || []), ...(finding.owasp || []), ...(finding.tags || [])];
-  if (!tags.length && !(finding.references || []).length) return "";
-  const chips = tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
-  const links = (finding.references || [])
-    .map((url) => `<p><a href="${escapeHtml(url)}" target="_blank" rel="noreferrer noopener">${escapeHtml(truncate(url, 80))}</a></p>`)
-    .join("");
-  return `<h3>Classification</h3><div class="tags">${chips}</div>${links}`;
-}
-
-function renderComments(comments) {
-  if (!comments || !comments.length) return `<p class="muted">No notes yet.</p>`;
-  return `<ul class="comments">${comments
-    .map(
-      (comment) => `<li class="comment">
-        <div class="who">${escapeHtml(comment.author)} · ${escapeHtml(relativeTime(comment.created_at))}</div>
-        <div class="body">${escapeHtml(comment.body)}</div>
-      </li>`
-    )
-    .join("")}</ul>`;
 }
 
 // --- actions ------------------------------------------------------------
