@@ -451,6 +451,135 @@ def cmd_rules(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_doctor(args: argparse.Namespace) -> int:
+    """Answer "why is this not working" without a round trip.
+
+    Every check here corresponds to something that has actually gone wrong:
+    a Python too old for the engine, a store written by a newer version, a port
+    already held by a board someone forgot about, a rule pack with a bad regex.
+    """
+    import platform
+    import socket
+
+    from . import gitinfo
+    from . import rules as rule_packs
+    from .scanners.pattern import compile_rules
+    from .scanners.registry import available
+
+    checks: List[Dict[str, Any]] = []
+
+    def record(name: str, ok: bool, detail: str, fatal: bool = False) -> None:
+        checks.append({"check": name, "ok": ok, "detail": detail, "fatal": fatal})
+
+    version = sys.version_info
+    record(
+        "python",
+        version >= (3, 9),
+        f"{platform.python_version()} ({'ok' if version >= (3, 9) else 'redassay needs 3.9 or newer'})",
+        fatal=True,
+    )
+
+    try:
+        raw = rule_packs.load_all()
+        compile_rules(raw)
+        record("rule packs", True, f"{len(raw)} rules across {len({r.get('pack') for r in raw})} packs")
+    except Exception as exc:                       # noqa: BLE001
+        record("rule packs", False, f"{type(exc).__name__}: {exc}", fatal=True)
+
+    try:
+        record("scanners", True, ", ".join(available()))
+    except Exception as exc:                       # noqa: BLE001
+        record("scanners", False, f"{type(exc).__name__}: {exc}", fatal=True)
+
+    try:
+        from .scanners.deps import load_advisories
+        index = load_advisories()
+        count = sum(len(v) for v in index.values())
+        record("advisory data", bool(index), f"{count} advisories, {len(index)} packages")
+    except Exception as exc:                       # noqa: BLE001
+        record("advisory data", False, f"{type(exc).__name__}: {exc}")
+
+    root = os.path.abspath(args.root)
+    record("target", os.path.isdir(root), root, fatal=True)
+    record("git", gitinfo.is_repo(root),
+           gitinfo.current_branch(root) or "not a git repository (--since will not work)")
+
+    store = Store(root)
+    if store.exists:
+        try:
+            data = store.load()
+            record("store", data.get("schema_version", 1) <= 2,
+                   f"{len(store)} findings, schema v{data.get('schema_version')}")
+        except Exception as exc:                   # noqa: BLE001
+            record("store", False, f"{type(exc).__name__}: {exc}")
+    else:
+        record("store", True, "not created yet - run `redassay scan`")
+
+    config = config_mod.load(root)
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    probe.settimeout(0.2)
+    try:
+        taken = probe.connect_ex((config.host, config.port)) == 0
+    finally:
+        probe.close()
+    record("board port", not taken,
+           f"{config.host}:{config.port} " + ("is already in use - pass --port" if taken else "is free"))
+
+    writable = os.access(root, os.W_OK)
+    record("writable", writable, root if writable else f"{root} is not writable")
+
+    if args.json:
+        _emit_json({"checks": checks, "ok": all(c["ok"] or not c["fatal"] for c in checks)})
+    else:
+        for check in checks:
+            mark = "ok  " if check["ok"] else ("FAIL" if check["fatal"] else "warn")
+            _out(f"  [{mark}] {check['check']:<14} {check['detail']}")
+        broken = [c for c in checks if not c["ok"] and c["fatal"]]
+        _out("")
+        _out("everything looks fine" if not broken else f"{len(broken)} blocking problem(s)")
+    return EXIT_ERROR if any(not c["ok"] and c["fatal"] for c in checks) else EXIT_OK
+
+
+def cmd_watch(args: argparse.Namespace) -> int:
+    """Poll the queue and print claimed work as JSON, one batch per line.
+
+    The agent loop lives in the plugin, not here - this exists so the same loop
+    can be driven from a terminal, and so `watch` is testable without a model.
+    """
+    import time
+
+    queue = queue_mod.ActionQueue(args.root)
+    store = Store(args.root)
+    deadline = time.time() + args.timeout if args.timeout else None
+    seen_any = False
+
+    while True:
+        claimed = queue.claim(limit=args.limit)
+        if claimed:
+            seen_any = True
+            store.reload()
+            for action in claimed:
+                entry = action.to_dict()
+                targets = action.payload.get("finding_ids") or ([action.finding_id] if action.finding_id else [])
+                entry["findings"] = [
+                    store.get(fid).to_dict() for fid in targets if store.get(fid) is not None
+                ]
+                print(json.dumps(entry), flush=True)
+            if args.once:
+                return EXIT_OK
+        elif args.once:
+            return EXIT_OK
+
+        if deadline and time.time() > deadline:
+            if not seen_any and not args.json:
+                _err("watch timed out with nothing queued")
+            return EXIT_OK
+        try:
+            time.sleep(args.interval)
+        except KeyboardInterrupt:
+            return 130
+
+
 BASELINE_FILE = "baseline.json"
 
 
@@ -687,6 +816,16 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("rules", help="list loaded rules", parents=[common])
     p.add_argument("--pack", default=None)
     p.set_defaults(func=cmd_rules)
+
+    p = sub.add_parser("doctor", help="check the environment and the store", parents=[common])
+    p.set_defaults(func=cmd_doctor)
+
+    p = sub.add_parser("watch", help="poll the queue and emit claimed work as JSON", parents=[common])
+    p.add_argument("--interval", type=float, default=3.0, help="seconds between polls")
+    p.add_argument("--limit", type=int, default=None, help="max actions per batch")
+    p.add_argument("--once", action="store_true", help="drain once and exit")
+    p.add_argument("--timeout", type=float, default=None, help="give up after this many seconds")
+    p.set_defaults(func=cmd_watch)
 
     p = sub.add_parser("baseline", help="freeze today's findings so gates only fail on new ones", parents=[common])
     p.add_argument("--show", action="store_true")
