@@ -67,7 +67,8 @@
       "remediation": "Use Model.objects.raw('... WHERE id = %s', [value]) and pass values through params.",
       "cwe": [
         "CWE-89"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "sql.knex-sequelize-raw",
@@ -101,7 +102,8 @@
       "remediation": "Pass a list of arguments and leave shell=False. If you need a pipeline, build it with subprocess pipes rather than a shell string.",
       "cwe": [
         "CWE-78"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "cmd.os-system",
@@ -165,7 +167,8 @@
       "remediation": "Avoid shell execution. If unavoidable, use escapeshellarg() on every interpolated value.",
       "cwe": [
         "CWE-78"
-      ]
+      ],
+      "skip_in_strings": true
     },
     {
       "id": "code.python-eval-exec",

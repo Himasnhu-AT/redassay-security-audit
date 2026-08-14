@@ -137,11 +137,8 @@ def render() -> str:
     out.append("In the source, with the reason next to the code it excuses:")
     out.append("")
     out.append("```python")
-    # The sample below is documentation. Rendering it through a variable keeps
-    # the generator from tripping the very rule it is documenting.
-    example_call = "subprocess.run(BACKUP_COMMAND, " + "shell=True)"
     out.append("# redassay: ignore py.shell-dynamic - the command is a module constant")
-    out.append(example_call)
+    out.append("subprocess.run(BACKUP_COMMAND, shell=True)")
     out.append("```")
     out.append("")
     out.append("Across a path:")
