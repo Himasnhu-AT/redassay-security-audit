@@ -413,3 +413,93 @@ class BaselineTest(CliTestCase):
         self.seed()
         self.run_cli("baseline")
         self.assertEqual(self.run_cli("scan", "--quiet", "--new-only", "--fail-on", "critical")[0], 0)
+
+
+class DoctorTest(CliTestCase):
+    def test_reports_every_check(self):
+        payload = self.run_json("doctor")
+        names = {c["check"] for c in payload["checks"]}
+        for expected in ("python", "rule packs", "scanners", "advisory data",
+                         "target", "git", "store", "board port", "writable"):
+            self.assertIn(expected, names)
+
+    def test_a_healthy_environment_passes(self):
+        code, _, _ = self.run_cli("doctor")
+        self.assertEqual(code, 0)
+        self.assertTrue(self.run_json("doctor")["ok"])
+
+    def test_it_notices_a_missing_store(self):
+        detail = next(c for c in self.run_json("doctor")["checks"] if c["check"] == "store")
+        self.assertIn("not created yet", detail["detail"])
+
+    def test_it_notices_an_existing_store(self):
+        self.seed()
+        detail = next(c for c in self.run_json("doctor")["checks"] if c["check"] == "store")
+        self.assertIn("findings", detail["detail"])
+
+    def test_a_missing_target_is_fatal(self):
+        out, err = io.StringIO(), io.StringIO()
+        from contextlib import redirect_stderr, redirect_stdout
+        with redirect_stdout(out), redirect_stderr(err):
+            code = main(["--root", os.path.join(self.root, "nope"), "doctor"])
+        self.assertEqual(code, 2)
+
+    def test_a_corrupt_store_is_reported_not_raised(self):
+        self.seed()
+        with open(os.path.join(self.root, ".redassay", "findings.json"), "w") as handle:
+            handle.write("{not json")
+        detail = next(c for c in self.run_json("doctor")["checks"] if c["check"] == "store")
+        self.assertFalse(detail["ok"])
+
+    def test_a_port_in_use_is_reported(self):
+        import socket
+        server = socket.socket()
+        server.bind(("127.0.0.1", 0))
+        server.listen(1)
+        port = server.getsockname()[1]
+        self.addCleanup(server.close)
+        os.makedirs(os.path.join(self.root, ".redassay"), exist_ok=True)
+        self.write(".redassay/config.json", json.dumps({"port": port}))
+        detail = next(c for c in self.run_json("doctor")["checks"] if c["check"] == "board port")
+        self.assertFalse(detail["ok"])
+        self.assertIn("already in use", detail["detail"])
+
+
+class WatchTest(CliTestCase):
+    def test_once_with_an_empty_queue_exits_cleanly(self):
+        self.seed()
+        code, out, _ = self.run_cli("watch", "--once")
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "")
+
+    def test_once_emits_claimed_work_as_jsonl(self):
+        finding_id = self.seed()
+        self.run_cli("queue", "push", "fix", "--id", finding_id)
+        code, out, _ = self.run_cli("watch", "--once")
+        self.assertEqual(code, 0)
+        lines = [line for line in out.splitlines() if line.strip()]
+        self.assertEqual(len(lines), 1)
+        action = json.loads(lines[0])
+        self.assertEqual(action["kind"], "fix")
+        self.assertEqual(action["findings"][0]["id"], finding_id)
+
+    def test_claimed_work_is_not_emitted_twice(self):
+        finding_id = self.seed()
+        self.run_cli("queue", "push", "fix", "--id", finding_id)
+        self.run_cli("watch", "--once")
+        self.assertEqual(self.run_cli("watch", "--once")[1].strip(), "")
+
+    def test_limit_leaves_the_rest_queued(self):
+        finding_id = self.seed()
+        # Three separate requests for the same finding: what matters here is the
+        # batch size, not how many distinct findings the fixture happens to have.
+        for _ in range(3):
+            self.run_cli("queue", "push", "fix", "--id", finding_id)
+        code, out, _ = self.run_cli("watch", "--once", "--limit", "2")
+        self.assertEqual(len([line for line in out.splitlines() if line.strip()]), 2)
+        self.assertEqual(len(ActionQueue(self.root).pending()), 1)
+
+    def test_timeout_returns_rather_than_hanging(self):
+        self.seed()
+        code, _, _ = self.run_cli("watch", "--timeout", "0.05", "--interval", "0.01")
+        self.assertEqual(code, 0)
