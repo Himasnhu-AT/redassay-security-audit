@@ -101,6 +101,7 @@ function chip(name, count, active, facet) {
 }
 
 function renderHotspots() {
+  // redassay: ignore xss.innerhtml-assignment - hotspotRow() escapes, see lib/render.js
   el("hotspots").innerHTML = state.hotspots.map(hotspotRow).join("");
 }
 
