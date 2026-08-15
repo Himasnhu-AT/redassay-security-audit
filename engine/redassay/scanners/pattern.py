@@ -22,6 +22,7 @@ from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tupl
 from .. import languages as lang_mod
 from .. import rules as rule_packs
 from .. import suppress
+from ..prefilter import Prefilter
 from ..models import Finding
 from ..walker import SourceFile
 from .base import ScanContext, Scanner
@@ -36,7 +37,7 @@ class CompiledRule:
         "raw", "id", "title", "severity", "confidence", "description", "remediation",
         "cwe", "owasp", "tags", "references", "languages", "pattern", "not_pattern",
         "nearby", "nearby_window", "nearby_absent", "path_include", "path_exclude",
-        "match_comments", "pack", "max_matches", "skip_in_strings",
+        "match_comments", "pack", "max_matches", "skip_in_strings", "prefilter",
     )
 
     def __init__(self, raw: Dict[str, Any]):
@@ -63,6 +64,7 @@ class CompiledRule:
         self.nearby_absent = re.compile(raw["nearby_absent"], flags) if raw.get("nearby_absent") else None
         self.nearby_window = int(raw.get("nearby_window", DEFAULT_NEARBY_WINDOW))
         self.path_include = raw.get("path_include") or []
+        self.prefilter = Prefilter(raw["pattern"], ignore_case=bool(raw.get("ignore_case")))
         self.path_exclude = raw.get("path_exclude") or []
 
     def applies_to_path(self, path: str) -> bool:
@@ -226,7 +228,22 @@ class PatternScanner(Scanner):
         lines = source.lines()
         if not lines:
             return
-        applicable = [r for r in self.rules_for(source.language) if r.applies_to_path(source.path)]
+        candidates = [r for r in self.rules_for(source.language) if r.applies_to_path(source.path)]
+        if not candidates:
+            return
+
+        # Cheap whole-file literal test before any per-line matching. On a large
+        # repository this is the difference between a scan you wait for and one
+        # you do not: most rules cannot possibly match most files, and one `in`
+        # replaces a regex search per line.
+        text = source.read()
+        lowered: Optional[str] = None
+        applicable = []
+        for rule in candidates:
+            if rule.prefilter.ignore_case and lowered is None:
+                lowered = text.lower()
+            if rule.prefilter.matches(text, lowered):
+                applicable.append(rule)
         if not applicable:
             return
         counts: Dict[str, int] = {}
