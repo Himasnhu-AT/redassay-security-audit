@@ -58,6 +58,23 @@ PROVIDER_PATTERNS: List[Tuple[str, str, str, str]] = [
     ("heroku-key", r"(?i)heroku[a-z0-9_ .\-]{0,20}[:=]\s*[\"']?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", "Heroku API key", "high"),
 ]
 
+#: One combined pattern, tried first. 27 provider searches per line is the
+#: slowest thing in a full scan of a large repository; a single alternation over
+#: the same patterns answers "is any of them here" in one pass, and the
+#: individual loop then runs on the handful of lines that survive.
+# A per-provider literal gate and a single combined alternation were both tried
+# here, and both measured slower than simply running the patterns: the gate
+# costs a regex of its own plus a list allocation per line, and the combined
+# alternation backtracks. The straightforward loop wins, so it stays.
+#
+# The real win is the pattern scanner's prefilter (prefilter.py), which works at
+# file granularity rather than line granularity. Numbers in docs/performance.md.
+
+#: Cheap structural test before the assignment regex: a secret assignment needs
+#: a separator and a quote.
+_ASSIGNMENT_SHAPE = re.compile(r"[:=]")
+
+
 # --- generic assignment detection -------------------------------------------
 SECRET_NAME = re.compile(
     r"(?i)\b([\w.\-]*(?:secret|passwd|password|pwd|token|api[_-]?key|apikey|access[_-]?key"
@@ -211,41 +228,46 @@ class SecretScanner(Scanner):
 
             if yielded_here:
                 continue
+            if _ASSIGNMENT_SHAPE.search(line):
+                yield from self._generic(source, lines, line_no, line, low_risk, seen_values)
 
-            for match in SECRET_NAME.finditer(line):
-                name, value = match.group(1), match.group(2)
-                if looks_like_placeholder(value) or not is_high_entropy(value):
-                    continue
-                if suppress_mod.suppressed_by_source(lines, line_no, "secret.hardcoded-assignment"):
-                    continue
-                key = ("generic", value)
-                if key in seen_values:
-                    continue
-                seen_values.add(key)
-                severity = "low" if low_risk else "high"
-                yield self.make_finding(
-                    rule_id="secret.hardcoded-assignment",
-                    title=f"High-entropy value assigned to '{name}'",
-                    source=source,
-                    line=line_no,
-                    snippet=_mask_line(line, value),
-                    severity=severity,
-                    confidence="low" if low_risk else "medium",
-                    description=(
-                        f"'{name}' is assigned a {len(value)}-character literal with "
-                        f"{shannon_entropy(value):.1f} bits of entropy per character. That is the "
-                        "shape of a real credential rather than a placeholder."
-                    ),
-                    remediation=(
-                        "Move the value into the environment or a secret manager and rotate it. "
-                        "If it is genuinely not a secret, rename the variable or add "
-                        "`# redassay: ignore secret.hardcoded-assignment` with the reason."
-                    ),
-                    cwe=["CWE-798"],
-                    owasp=["A07:2021 Identification and Authentication Failures"],
-                    tags=["secrets", "entropy"],
-                    scanner=self.name,
-                )
+    def _generic(self, source, lines, line_no, line, low_risk, seen_values) -> Iterator[Finding]:
+        """The entropy-gated half: a secret-shaped name holding a random-looking value."""
+        from .. import suppress as suppress_mod
+
+        for match in SECRET_NAME.finditer(line):
+            name, value = match.group(1), match.group(2)
+            if looks_like_placeholder(value) or not is_high_entropy(value):
+                continue
+            if suppress_mod.suppressed_by_source(lines, line_no, "secret.hardcoded-assignment"):
+                continue
+            key = ("generic", value)
+            if key in seen_values:
+                continue
+            seen_values.add(key)
+            yield self.make_finding(
+                rule_id="secret.hardcoded-assignment",
+                title=f"High-entropy value assigned to '{name}'",
+                source=source,
+                line=line_no,
+                snippet=_mask_line(line, value),
+                severity="low" if low_risk else "high",
+                confidence="low" if low_risk else "medium",
+                description=(
+                    f"'{name}' is assigned a {len(value)}-character literal with "
+                    f"{shannon_entropy(value):.1f} bits of entropy per character. That is the "
+                    "shape of a real credential rather than a placeholder."
+                ),
+                remediation=(
+                    "Move the value into the environment or a secret manager and rotate it. "
+                    "If it is genuinely not a secret, rename the variable or add "
+                    "`# redassay: ignore secret.hardcoded-assignment` with the reason."
+                ),
+                cwe=["CWE-798"],
+                owasp=["A07:2021 Identification and Authentication Failures"],
+                tags=["secrets", "entropy"],
+                scanner=self.name,
+            )
 
     def finalize(self, context: ScanContext) -> Iterator[Finding]:
         """Flag committed env files separately - the file itself is the problem."""
