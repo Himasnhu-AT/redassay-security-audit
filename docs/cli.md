@@ -198,6 +198,42 @@ pointed at, so think before passing `--host`.
 
 ---
 
+## Diagnostics
+
+### `doctor`
+
+```bash
+redassay doctor
+redassay doctor --json
+```
+
+Checks the Python version, that every rule pack compiles, that the scanners
+load, that the advisory database reads, whether the target is a git repository,
+whether the store is readable and at a schema this build understands, whether
+the board port is free, and whether the directory is writable.
+
+Every check corresponds to something that has actually gone wrong. Run it first
+when something does not work; it answers most of the questions without a round
+trip.
+
+Exits 2 if a blocking problem is found.
+
+### `watch`
+
+```bash
+redassay watch                      # poll until interrupted
+redassay watch --once               # drain what is queued and exit
+redassay watch --interval 1 --limit 5
+redassay watch --timeout 60
+```
+
+Polls the action queue and writes each claimed action to stdout as one JSON
+object per line, with the full finding attached. The agent loop lives in the
+plugin; this exists so the same loop can be driven from a terminal, and so the
+behaviour is testable without a model.
+
+---
+
 ## Configuration
 
 Resolution order, most specific first:
