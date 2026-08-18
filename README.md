@@ -181,6 +181,13 @@ tests/js/          34 node:test tests for the board's modules
 fixtures/          vulnerable apps, and one clean control app
 ```
 
+## Performance
+
+Roughly 1.5-3 MB/s: a 250-file project in under a second, Django's 5,375 files in
+around 20. A literal prefilter in front of every pattern rule does most of the
+work - and two optimizations that looked obvious and measured *slower* are
+written up alongside it in [`docs/performance.md`](docs/performance.md).
+
 ## Running the tests
 
 ```bash
