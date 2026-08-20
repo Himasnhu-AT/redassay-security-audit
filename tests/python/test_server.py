@@ -288,3 +288,45 @@ class ConcurrencyTest(ServerTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReportEndpointTest(ServerTestCase):
+    def test_markdown(self):
+        status, payload = self.get("/api/report?format=markdown")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["filename"], "SECURITY-AUDIT.md")
+        self.assertIn("# Security audit", payload["body"])
+        self.assertGreater(payload["count"], 0)
+
+    def test_sarif_is_valid_json(self):
+        payload = self.get("/api/report?format=sarif")[1]
+        doc = json.loads(payload["body"])
+        self.assertEqual(doc["version"], "2.1.0")
+        self.assertEqual(payload["media_type"], "application/sarif+json")
+
+    def test_json(self):
+        payload = self.get("/api/report?format=json")[1]
+        self.assertIn("findings", json.loads(payload["body"]))
+
+    def test_default_is_markdown(self):
+        self.assertEqual(self.get("/api/report")[1]["format"], "markdown")
+
+    def test_an_unknown_format_is_rejected(self):
+        try:
+            self.get("/api/report?format=pdf")
+            self.fail("expected 400")
+        except urllib.error.HTTPError as error:
+            self.assertEqual(error.code, 400)
+
+    def test_dismissed_findings_are_excluded_by_default(self):
+        finding_id = self.first_finding_id()
+        before = self.get("/api/report?format=json")[1]["count"]
+        self.post(f"/api/findings/{finding_id}/dismiss", {"reason": "not reachable"})
+        after = self.get("/api/report?format=json")[1]["count"]
+        self.assertEqual(after, before - 1)
+
+    def test_status_filter(self):
+        finding_id = self.first_finding_id()
+        self.post(f"/api/findings/{finding_id}/dismiss", {"reason": "no"})
+        payload = self.get("/api/report?format=json&status=dismissed")[1]
+        self.assertEqual(payload["count"], 1)
