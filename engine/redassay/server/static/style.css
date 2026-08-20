@@ -380,3 +380,51 @@ button, input { font-family: inherit; font-size: inherit; color: inherit; }
 /* The detail pane ends in a form; without room for it the submit button sits
    under the viewport edge. */
 .detail-pane { padding-bottom: 96px; }
+
+/* --- export sheet ------------------------------------------------------ */
+/* The CSP blocks script-initiated downloads, and the board is often reached
+   over an SSH tunnel where a download would land on the wrong machine anyway.
+   Showing the text and offering Copy works in both cases. */
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 32px;
+}
+.sheet[hidden] { display: none; }
+.sheet-panel {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  width: min(960px, 100%);
+  height: min(720px, 100%);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sheet-actions { display: flex; gap: 6px; }
+.sheet textarea {
+  flex: 1;
+  border: 0;
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 14px;
+  resize: none;
+  border-radius: 0 0 9px 9px;
+}
+.sheet textarea:focus { outline: none; }

@@ -16,6 +16,7 @@
   <div class="counts" id="header-counts"></div>
   <div class="topbar-actions">
     <span class="queue-pill" id="queue-pill" hidden></span>
+    <button class="btn" id="btn-export" type="button">Export</button>
     <button class="btn" id="btn-rescan" type="button">Rescan</button>
     <button class="btn btn-primary" id="btn-fix" type="button" disabled>Fix selected</button>
   </div>
@@ -85,6 +86,22 @@
     </div>
   </section>
 </main>
+
+<div class="sheet" id="export-sheet" hidden>
+  <div class="sheet-panel">
+    <div class="sheet-head">
+      <strong id="export-title">Report</strong>
+      <span class="sheet-actions">
+        <button class="btn btn-small" data-export="markdown" type="button">Markdown</button>
+        <button class="btn btn-small" data-export="sarif" type="button">SARIF</button>
+        <button class="btn btn-small" data-export="json" type="button">JSON</button>
+        <button class="btn btn-small" id="export-copy" type="button">Copy</button>
+        <button class="btn btn-small" id="export-close" type="button">Close</button>
+      </span>
+    </div>
+    <textarea id="export-body" readonly spellcheck="false"></textarea>
+  </div>
+</div>
 
 <div class="toast" id="toast" hidden></div>
 

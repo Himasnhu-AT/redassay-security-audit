@@ -297,6 +297,39 @@ async function rescan() {
   }
 }
 
+async function showExport(format = "markdown") {
+  try {
+    const payload = await api(`/api/report?format=${encodeURIComponent(format)}`);
+    el("export-title").textContent = `${payload.filename} - ${payload.count} findings`;
+    el("export-body").value = payload.body;
+    el("export-sheet").hidden = false;
+    const textarea = el("export-body");
+    textarea.focus();
+    // Focusing a readonly textarea lands the caret at the end, which shows the
+    // reader the last finding in the report rather than the first.
+    textarea.setSelectionRange(0, 0);
+    textarea.scrollTop = 0;
+  } catch (error) {
+    toast(error.message, true);
+  }
+}
+
+function hideExport() {
+  el("export-sheet").hidden = true;
+}
+
+async function copyExport() {
+  const textarea = el("export-body");
+  textarea.select();
+  try {
+    await navigator.clipboard.writeText(textarea.value);
+    toast("Copied");
+  } catch {
+    // Clipboard access can be refused; the text is selected either way.
+    toast("Selected - press the copy shortcut", true);
+  }
+}
+
 let toastTimer = null;
 function toast(message, isError = false) {
   const node = el("toast");
@@ -361,6 +394,14 @@ function wire() {
     renderList();
   });
   el("btn-rescan").addEventListener("click", rescan);
+  el("btn-export").addEventListener("click", () => showExport("markdown"));
+  el("export-close").addEventListener("click", hideExport);
+  el("export-copy").addEventListener("click", copyExport);
+  el("export-sheet").addEventListener("click", (event) => {
+    if (event.target.id === "export-sheet") hideExport();
+    const button = event.target.closest("[data-export]");
+    if (button) showExport(button.dataset.export);
+  });
 
   el("detail").addEventListener("click", (event) => {
     const button = event.target.closest("[data-act]");
@@ -406,6 +447,7 @@ function wire() {
       return;
     }
     if (event.key === "Escape") {
+      hideExport();
       closePanels();
       if (typing) event.target.blur();
       return;
