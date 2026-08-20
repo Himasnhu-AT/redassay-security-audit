@@ -41,66 +41,108 @@ SEVERITY_WEIGHT = {
 }
 
 #: Rules that describe the same underlying defect, keyed to a shared concept.
+#:
+#: Concepts are language-agnostic on purpose. Deduplication is keyed on
+#: (path, concept, line), and two findings at the same line of the same file are
+#: necessarily the same language - so there is no need for `sql-injection-js`
+#: alongside `sql-injection`, and keeping them separate is how the generic
+#: `authz.path-traversal-join` ended up duplicating both language-specific rules.
 EQUIVALENT = {
-    "py.yaml-unsafe-load": "unsafe-yaml",
-    "deser.yaml-unsafe-load": "unsafe-yaml",
-    "py.pickle-load": "unsafe-pickle",
-    "deser.python-pickle": "unsafe-pickle",
-    "py.eval-dynamic": "dynamic-eval",
-    "code.python-eval-exec": "dynamic-eval",
-    "js.eval-tainted": "dynamic-eval-js",
-    "code.js-eval": "dynamic-eval-js",
+    # injection
     "py.sql-dynamic": "sql-injection",
+    "js.sql-tainted": "sql-injection",
     "sql.fstring-query": "sql-injection",
     "sql.string-concat-query": "sql-injection",
-    "js.sql-tainted": "sql-injection-js",
-    "sql.knex-sequelize-raw": "sql-injection-js",
-    "py.shell-dynamic": "command-injection",
-    "cmd.shell-true": "command-injection",
-    "cmd.os-system": "command-injection",
-    "js.exec-tainted": "command-injection-js",
-    "cmd.node-exec": "command-injection-js",
-    "py.tls-verify-off": "tls-verify-off",
-    "crypto.tls-verify-disabled": "tls-verify-off",
-    "py.flask-debug": "debug-enabled",
-    "config.debug-enabled": "debug-enabled",
-    "py.django-debug-true": "debug-enabled",
-    "py.path-tainted": "path-traversal",
-    "authz.path-traversal-join": "path-traversal",
-    "js.path-tainted": "path-traversal-js",
-    "py.ssrf": "ssrf",
-    "ssrf.http-client-dynamic-url": "ssrf",
-    "js.ssrf-tainted": "ssrf-js",
-    "py.weak-random": "weak-random",
-    "crypto.weak-random-security": "weak-random",
-    "py.weak-hash": "weak-hash",
-    "crypto.md5-sha1-usage": "weak-hash",
-    "py.open-redirect": "open-redirect",
-    "ssrf.open-redirect": "open-redirect",
-    "config.curl-pipe-shell": "curl-pipe",
-    "ci.curl-pipe-shell": "curl-pipe",
-    "crypto.ecb-mode": "weak-cipher",
-    "jvm.weak-cipher-getinstance": "weak-cipher",
-    "crypto.des-rc4-3des": "weak-cipher",
-    "config.csrf-disabled": "csrf-disabled",
-    "jvm.csrf-disabled": "csrf-disabled",
-    "go.insecure-skip-verify": "tls-verify-off",
-    "jvm.trust-all-certs": "tls-verify-off",
+    "sql.django-raw-interpolation": "sql-injection",
+    "sql.knex-sequelize-raw": "sql-injection",
     "go.sql-concat": "sql-injection",
     "jvm.jdbc-concat": "sql-injection",
     "php.sql-superglobal": "sql-injection",
-    "jvm.runtime-exec": "command-injection",
+
+    "py.shell-dynamic": "command-injection",
+    "js.exec-tainted": "command-injection",
+    "cmd.shell-true": "command-injection",
+    "cmd.os-system": "command-injection",
+    "cmd.node-exec": "command-injection",
     "cmd.php-exec": "command-injection",
-    "go.command-exec": "command-injection",
     "cmd.ruby-backtick": "command-injection",
+    "go.command-exec": "command-injection",
+    "jvm.runtime-exec": "command-injection",
+
+    "py.eval-dynamic": "dynamic-eval",
+    "js.eval-tainted": "dynamic-eval",
+    "code.python-eval-exec": "dynamic-eval",
+    "code.js-eval": "dynamic-eval",
+
+    "py.ssti": "template-injection",
+    "inject.ssti-render-string": "template-injection",
+    "ruby.render-inline": "template-injection",
+
+    # deserialization
+    "py.pickle-load": "unsafe-pickle",
+    "deser.python-pickle": "unsafe-pickle",
+    "py.yaml-unsafe-load": "unsafe-yaml",
+    "deser.yaml-unsafe-load": "unsafe-yaml",
+
+    # access control
+    "py.path-tainted": "path-traversal",
+    "js.path-tainted": "path-traversal",
+    "authz.path-traversal-join": "path-traversal",
+    "go.path-join-request": "path-traversal",
+
+    "py.open-redirect": "open-redirect",
+    "js.redirect-tainted": "open-redirect",
+    "ssrf.open-redirect": "open-redirect",
+
+    "py.ssrf": "ssrf",
+    "js.ssrf-tainted": "ssrf",
+    "ssrf.http-client-dynamic-url": "ssrf",
+
+    "py.assert-security": "assert-as-authz",
+    "authz.assert-for-authorization": "assert-as-authz",
+
     "php.file-inclusion-superglobal": "file-inclusion",
     "code.php-eval-include": "file-inclusion",
-    "go.math-rand-secret": "weak-random",
-    "go.path-join-request": "path-traversal",
-    "ruby.render-inline": "template-injection",
-    "inject.ssti-render-string": "template-injection",
+
     "api.mass-assignment-spread": "mass-assignment",
     "ruby.mass-assignment": "mass-assignment",
+
+    # crypto
+    "py.tls-verify-off": "tls-verify-off",
+    "crypto.tls-verify-disabled": "tls-verify-off",
+    "go.insecure-skip-verify": "tls-verify-off",
+    "jvm.trust-all-certs": "tls-verify-off",
+
+    "py.weak-random": "weak-random",
+    "crypto.weak-random-security": "weak-random",
+    "go.math-rand-secret": "weak-random",
+
+    "py.weak-hash": "weak-hash",
+    "crypto.md5-sha1-usage": "weak-hash",
+    "crypto.weak-hash-password": "weak-hash",
+
+    "crypto.ecb-mode": "weak-cipher",
+    "jvm.weak-cipher-getinstance": "weak-cipher",
+    "crypto.des-rc4-3des": "weak-cipher",
+
+    # configuration
+    "py.flask-debug": "debug-enabled",
+    "config.debug-enabled": "debug-enabled",
+    "py.django-debug-true": "debug-enabled",
+
+    "config.csrf-disabled": "csrf-disabled",
+    "jvm.csrf-disabled": "csrf-disabled",
+
+    "config.curl-pipe-shell": "curl-pipe",
+    "ci.curl-pipe-shell": "curl-pipe",
+
+    # secrets - one credential on one line is one finding, however it was spotted
+    "secret.hardcoded-assignment": "hardcoded-secret",
+    "config.django-secret-key-literal": "hardcoded-secret",
+    "config.env-secret-value": "hardcoded-secret",
+    "config.dockerfile-baked-secret": "hardcoded-secret",
+    "config.k8s-inline-secret": "hardcoded-secret",
+    "js.jwt-hardcoded-secret": "hardcoded-secret",
 }
 
 
@@ -143,11 +185,18 @@ def dedupe(findings: Iterable[Finding]) -> List[Finding]:
 
 
 def _wins(candidate: Finding, incumbent: Finding) -> bool:
-    candidate_rank = SCANNER_PRECEDENCE.get(candidate.source, 0)
-    incumbent_rank = SCANNER_PRECEDENCE.get(incumbent.source, 0)
-    if candidate_rank != incumbent_rank:
-        return candidate_rank > incumbent_rank
-    return priority(candidate) > priority(incumbent)
+    """Which of two reports of the same defect the reviewer should see.
+
+    Priority first, not scanner precedence. `crypto.weak-hash-password` and
+    `py.weak-hash` describe the same line, but one of them knows the digest is
+    hashing a password - and that is the version worth reading, even though it
+    comes from the less sophisticated scanner. Scanner precedence only breaks
+    genuine ties.
+    """
+    candidate_priority, incumbent_priority = priority(candidate), priority(incumbent)
+    if candidate_priority != incumbent_priority:
+        return candidate_priority > incumbent_priority
+    return SCANNER_PRECEDENCE.get(candidate.source, 0) > SCANNER_PRECEDENCE.get(incumbent.source, 0)
 
 
 def filter_severity(findings: Iterable[Finding], floor: Optional[str]) -> List[Finding]:
