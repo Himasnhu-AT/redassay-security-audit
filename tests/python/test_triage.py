@@ -152,3 +152,51 @@ class ConceptMapTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConceptUnificationTest(unittest.TestCase):
+    """Concepts are language-agnostic; the -js split caused real duplicates."""
+
+    def test_path_traversal_is_one_concept_across_languages(self):
+        for rule_id in ("py.path-tainted", "js.path-tainted",
+                        "authz.path-traversal-join", "go.path-join-request"):
+            self.assertEqual(triage.concept(make_finding(rule_id=rule_id)), "path-traversal")
+
+    def test_sql_injection_is_one_concept(self):
+        for rule_id in ("py.sql-dynamic", "js.sql-tainted", "sql.fstring-query",
+                        "go.sql-concat", "jvm.jdbc-concat", "php.sql-superglobal"):
+            self.assertEqual(triage.concept(make_finding(rule_id=rule_id)), "sql-injection")
+
+    def test_no_concept_name_carries_a_language_suffix(self):
+        for concept in set(triage.EQUIVALENT.values()):
+            self.assertFalse(concept.endswith("-js"), concept)
+            self.assertFalse(concept.endswith("-py"), concept)
+
+    def test_a_credential_is_one_finding_however_it_was_spotted(self):
+        for rule_id in ("secret.hardcoded-assignment", "config.django-secret-key-literal",
+                        "js.jwt-hardcoded-secret"):
+            self.assertEqual(triage.concept(make_finding(rule_id=rule_id)), "hardcoded-secret")
+
+
+class DedupePreferenceTest(unittest.TestCase):
+    def test_the_better_characterized_finding_wins_over_the_smarter_scanner(self):
+        """`crypto.weak-hash-password` knows the digest is hashing a password.
+        `py.weak-hash` only knows it is md5. The first one is worth reading."""
+        location = Location(path="auth.py", line=12, snippet="hashlib.md5(password)")
+        generic = make_finding(rule_id="py.weak-hash", severity="medium",
+                               confidence="medium", source="python-ast", location=location)
+        specific = make_finding(rule_id="crypto.weak-hash-password", severity="high",
+                                confidence="medium", source="pattern", location=location)
+        kept = triage.dedupe([generic, specific])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0].rule_id, "crypto.weak-hash-password")
+
+    def test_scanner_precedence_still_breaks_a_genuine_tie(self):
+        location = Location(path="a.py", line=1, snippet="assert user.is_admin")
+        pattern = make_finding(rule_id="authz.assert-for-authorization", severity="high",
+                               confidence="medium", source="pattern", location=location)
+        ast_based = make_finding(rule_id="py.assert-security", severity="high",
+                                 confidence="medium", source="python-ast", location=location)
+        kept = triage.dedupe([pattern, ast_based])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0].source, "python-ast")

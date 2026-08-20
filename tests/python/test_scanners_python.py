@@ -229,9 +229,18 @@ class FixtureCoverageTest(TempRepo):
         from redassay import config as config_mod
         from redassay.engine import scan as run
 
+        from redassay.triage import EQUIVALENT
+
         findings = run(config_mod.load(os.path.join(FIXTURES, "vuln-flask"))).findings
         found = {f.rule_id for f in findings}
-        missing = [rule for rule in self.EXPECTED if rule not in found]
+        # Triage may keep an equivalent rule that characterizes the same defect
+        # better - `crypto.weak-hash-password` over `py.weak-hash`, for one - so
+        # the assertion is on the concept, not the exact id.
+        concepts = {EQUIVALENT.get(rule_id, rule_id) for rule_id in found}
+        missing = [
+            rule for rule in self.EXPECTED
+            if rule not in found and EQUIVALENT.get(rule, rule) not in concepts
+        ]
         self.assertEqual(missing, [], f"fixture stopped triggering: {missing}")
 
 
