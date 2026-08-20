@@ -503,3 +503,36 @@ class WatchTest(CliTestCase):
         self.seed()
         code, _, _ = self.run_cli("watch", "--timeout", "0.05", "--interval", "0.01")
         self.assertEqual(code, 0)
+
+
+class InitTemplateTest(CliTestCase):
+    def test_a_starter_ignore_file_is_written(self):
+        self.run_cli("init")
+        path = os.path.join(self.root, ".redassayignore")
+        self.assertTrue(os.path.isfile(path))
+        body = open(path).read()
+        self.assertIn("tests/", body)
+        self.assertIn("59%", body)
+
+    def test_every_line_in_the_template_is_commented_out(self):
+        self.run_cli("init")
+        body = open(os.path.join(self.root, ".redassayignore")).read()
+        for line in body.splitlines():
+            if line.strip():
+                self.assertTrue(line.startswith("#"), line)
+
+    def test_the_template_does_not_change_scan_results(self):
+        self.write("app.py", VULNERABLE)
+        before = len(self.run_json("scan")["findings"])
+        os.remove(os.path.join(self.root, ".redassay", "findings.json"))
+        self.run_cli("init")
+        self.assertEqual(len(self.run_json("scan")["findings"]), before)
+
+    def test_an_existing_ignore_file_is_not_overwritten(self):
+        self.write(".redassayignore", "vendor/\n")
+        self.run_cli("init")
+        self.assertEqual(open(os.path.join(self.root, ".redassayignore")).read(), "vendor/\n")
+
+    def test_json_reports_what_it_created(self):
+        payload = self.run_json("init")
+        self.assertIn(".redassayignore", payload["created"])
