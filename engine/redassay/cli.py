@@ -42,24 +42,64 @@ def _color_enabled(args: argparse.Namespace) -> bool:
 
 
 # --- commands ----------------------------------------------------------------
+IGNORE_TEMPLATE = """\
+# Paths redassay should not scan. gitignore syntax; read alongside .gitignore.
+#
+# Test suites are the usual first entry. They construct malicious input on
+# purpose, so they produce findings that are technically correct and never
+# actionable - on Django, 59% of all findings come from its own tests.
+# Uncomment what applies to this repository.
+
+# tests/
+# **/tests/
+# spec/
+# **/__tests__/
+# **/*.test.js
+# **/*.spec.ts
+
+# Vendored or generated code you do not own:
+# vendor/
+# third_party/
+# **/generated/
+# **/*_pb2.py
+"""
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     config = config_mod.load(args.root)
     store = Store(config.root)
     store.ensure_dir()
     store.save()
     path = config_mod.save(config)
+    created = []
+
     gitignore = os.path.join(config.root, ".gitignore")
     if os.path.isfile(gitignore):
         body = open(gitignore, "r", encoding="utf-8").read()
         if ".redassay" not in body:
             with open(gitignore, "a", encoding="utf-8") as handle:
                 handle.write("\n# redassay findings store\n.redassay/\n")
+            created.append(".gitignore entry")
+
+    # A starter ignore file, commented out. Writing it empty-but-explained is
+    # better than leaving people to discover the feature after their first scan
+    # comes back 60% test code.
+    ignore_path = os.path.join(config.root, ".redassayignore")
+    if not os.path.exists(ignore_path):
+        with open(ignore_path, "w", encoding="utf-8") as handle:
+            handle.write(IGNORE_TEMPLATE)
+        created.append(".redassayignore")
+
     if args.json:
-        _emit_json({"store": store.path, "config": path})
+        _emit_json({"store": store.path, "config": path, "created": created})
     else:
         _out(f"Initialized {store.dir}")
         _out(f"  findings  {store.path}")
         _out(f"  config    {path}")
+        if ".redassayignore" in created:
+            _out(f"  ignore    {ignore_path}  (starter template, all commented out)")
+        _out("")
+        _out("Next:  redassay scan")
     return EXIT_OK
 
 
