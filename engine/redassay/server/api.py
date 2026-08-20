@@ -235,6 +235,49 @@ def get_source(request) -> Tuple[int, Any]:
     return 200, payload
 
 
+@router.get(r"/api/report")
+def get_report(request) -> Tuple[int, Any]:
+    """Render a report without leaving the board.
+
+    Returned as JSON rather than as a download because the board's CSP blocks
+    script-initiated saves; the UI puts the text on screen and lets the reader
+    copy it, which also works over SSH port forwarding.
+    """
+    from .. import report as report_mod, sarif as sarif_mod
+    from .. import __version__
+
+    fmt = (request.query.get("format") or "markdown").lower()
+    if fmt not in {"markdown", "json", "sarif"}:
+        return 400, {"error": "format must be markdown, json or sarif"}
+
+    store = request.api.fresh()
+    statuses = request.query.get("status")
+    wanted = [s for s in statuses.split(",") if s] if statuses else list(models.ACTIONABLE)
+    findings = triage_mod.rank(store.query(status=wanted or None))
+
+    if fmt == "markdown":
+        body = report_mod.markdown(findings, title="Security audit",
+                                   repo=os.path.basename(store.root))
+        media = "text/markdown"
+        filename = "SECURITY-AUDIT.md"
+    elif fmt == "sarif":
+        body = sarif_mod.dumps(findings, tool_version=__version__)
+        media = "application/sarif+json"
+        filename = "redassay.sarif"
+    else:
+        body = report_mod.as_json(findings, extra={"stats": store.stats()})
+        media = "application/json"
+        filename = "redassay.json"
+
+    return 200, {
+        "format": fmt,
+        "media_type": media,
+        "filename": filename,
+        "count": len(findings),
+        "body": body,
+    }
+
+
 @router.get(r"/api/health")
 def get_health(request) -> Tuple[int, Any]:
     return 200, {"ok": True, "root": request.api.root}
