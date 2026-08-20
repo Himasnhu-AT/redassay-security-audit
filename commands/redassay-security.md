@@ -25,6 +25,11 @@ Define that once at the start and reuse it. Check it runs (`$REDASSAY --version`
 before anything else; if it fails, report the error and stop rather than
 improvising a scan by hand.
 
+If anything behaves oddly later - a scan finds nothing, the board will not
+start, `--since` fails - run `$REDASSAY doctor` before guessing. It checks the
+Python version, the rule packs, the store schema, the git repository and the
+board port, and it names the problem directly.
+
 The target repository is the current working directory unless a second argument
 gives a path. Pass it as `--root <path>` to every command.
 
@@ -205,6 +210,12 @@ Report counts, hotspots and anything pending.
 $REDASSAY report --format markdown -o SECURITY-AUDIT.md
 $REDASSAY report --format sarif -o redassay.sarif
 ```
+
+### `doctor`
+```bash
+$REDASSAY doctor
+```
+Environment and store diagnostics. Report anything that is not `ok`.
 
 ### `reset`
 Ask for confirmation, then delete `.redassay/`. This discards every dismissal
