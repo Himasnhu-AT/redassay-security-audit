@@ -34,6 +34,21 @@ DEFAULT_EXCLUDE_GLOBS = [
     "*.sqlite", "*.sqlite3", "*.pack", "*.idx",
 ]
 
+#: Directory names that almost always hold test code. Not excluded by default -
+#: a vulnerability in a test helper is still a vulnerability, and some projects
+#: keep fixtures that matter here - but available behind `--exclude-tests`,
+#: because on a framework the test suite can be the majority of all findings.
+TEST_DIR_NAMES = {
+    "tests", "test", "spec", "specs", "__tests__", "__mocks__", "testdata",
+    "e2e", "integration-tests", "acceptance", "features",
+}
+
+TEST_FILE_GLOBS = [
+    "test_*.py", "*_test.py", "*_test.go", "*.test.js", "*.test.ts",
+    "*.test.jsx", "*.test.tsx", "*.spec.js", "*.spec.ts", "*_spec.rb",
+    "*Test.java", "*Tests.cs",
+]
+
 MAX_FILE_BYTES = 1_500_000
 BINARY_SNIFF_BYTES = 4096
 
@@ -47,6 +62,7 @@ class WalkOptions:
     follow_symlinks: bool = False
     respect_gitignore: bool = True
     languages: Optional[set] = None
+    exclude_tests: bool = False
 
 
 @dataclass
@@ -136,12 +152,15 @@ def walk(root: str, options: Optional[WalkOptions] = None) -> Iterator[SourceFil
         dirnames[:] = [
             d for d in sorted(dirnames)
             if d not in options.exclude_dirs
+            and not (options.exclude_tests and d.lower() in TEST_DIR_NAMES)
             and not ignored(gitignore, f"{rel_dir}/{d}".lstrip("/"), is_dir=True)
         ]
         for filename in sorted(filenames):
             rel_path = f"{rel_dir}/{filename}".lstrip("/")
             abspath = os.path.join(dirpath, filename)
             if any(fnmatch.fnmatch(filename, glob) for glob in excludes):
+                continue
+            if options.exclude_tests and any(fnmatch.fnmatch(filename, glob) for glob in TEST_FILE_GLOBS):
                 continue
             if ignored(gitignore, rel_path):
                 continue

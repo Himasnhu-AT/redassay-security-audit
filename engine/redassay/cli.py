@@ -111,6 +111,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         exclude=args.exclude or [],
         scanners=args.scanner or [],
         disabled_scanners=args.skip_scanner or [],
+        exclude_tests=args.exclude_tests or None,
         fail_on=args.fail_on,
     )
     quiet = args.json or args.quiet
@@ -748,6 +749,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min-severity", default=None, choices=sev.ORDER)
     p.add_argument("--include", action="append", help="limit to these paths/globs (repeatable)")
     p.add_argument("--exclude", action="append", help="skip these globs (repeatable)")
+    p.add_argument("--exclude-tests", action="store_true",
+                   help="skip test directories and test files - on a framework they can be "
+                        "the majority of all findings")
     p.add_argument("--scanner", action="append", help="run only this scanner (repeatable)")
     p.add_argument("--skip-scanner", action="append", help="disable a scanner (repeatable)")
     p.add_argument("--fail-on", default=None, choices=sev.ORDER, help="exit 1 if anything at this level is open")

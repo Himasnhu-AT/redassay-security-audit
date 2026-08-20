@@ -94,6 +94,7 @@ def scan(
         exclude=list(config.exclude),
         max_bytes=config.max_file_bytes,
         respect_gitignore=config.respect_gitignore,
+        exclude_tests=config.exclude_tests,
     )
     emit("walk:start", {"root": config.root})
     files = collect(config.root, options)

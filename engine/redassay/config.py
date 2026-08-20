@@ -36,6 +36,7 @@ class Config:
     author: str = "you"
     max_file_bytes: int = 1_500_000
     respect_gitignore: bool = True
+    exclude_tests: bool = False
     fail_on: Optional[str] = None                          # severity floor for exit code 1
 
     def to_dict(self) -> Dict[str, Any]:
