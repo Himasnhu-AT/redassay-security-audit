@@ -165,6 +165,11 @@ A scanner is only as useful as its noise floor. The measures taken here:
 `tests/python/test_false_positives.py` is a regression suite built from findings
 that real repositories produced and a human rejected.
 
+[`docs/evaluation.md`](docs/evaluation.md) has the measured results on PyGoat,
+NodeGoat and Django - including the four false positives NodeGoat produced and
+the honest finding that Django's own internals light up the rules because a
+framework *implements* the primitives the rules look for.
+
 ## Layout
 
 ```
