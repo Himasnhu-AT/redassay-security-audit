@@ -23,6 +23,7 @@ Run every enabled scanner, merge the result into the store, print a summary.
 | `--min-severity LEVEL` | Drop anything below this level |
 | `--include GLOB` | Restrict to these paths (repeatable) |
 | `--exclude GLOB` | Skip these filenames (repeatable) |
+| `--exclude-tests` | Skip test directories and test files |
 | `--scanner NAME` | Run only this scanner (repeatable) |
 | `--skip-scanner NAME` | Disable a scanner (repeatable) |
 | `--since REF` | Only scan files that differ from a git ref |
@@ -39,6 +40,11 @@ redassay scan --min-severity high -v
 redassay scan --since origin/main --fail-on high
 redassay scan --scanner secrets --json
 ```
+
+`--exclude-tests` is worth reaching for on an unfamiliar repository. Test suites
+construct malicious input on purpose; on Django, 59% of all findings came from
+its own tests. The flag is not the default because a vulnerability in a test
+helper is still a vulnerability - it is a decision, not a cleanup.
 
 `--since` is what makes this usable as a pull-request gate. It asks git which
 files differ, and scans only those. If the ref does not exist, the command fails
