@@ -45,6 +45,18 @@ before it can tell you whether you have a problem is a hard sell.
 
 Requires Python 3.9+. Node is only needed to run the board's own test suite.
 
+## See it work
+
+```bash
+bash scripts/demo.sh
+```
+
+Copies the vulnerable fixture to a temp directory and walks the whole loop -
+scan, approve two fixes, dismiss one with a reason, drain the queue, patch,
+rescan. The two fixed findings come back `verified`; the dismissal and the
+review note survive the rescan. Nothing touches the repository you are in. Add
+`--serve` to leave the board running at the end.
+
 ## Using it
 
 ```
