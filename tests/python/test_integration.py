@@ -225,3 +225,35 @@ class FullLoopTest(TempRepo):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DemoScriptTest(unittest.TestCase):
+    """The demo is the first thing anyone runs. It must not rot."""
+
+    def test_it_completes_and_verifies_both_fixes(self):
+        import subprocess
+        from .helpers import ROOT
+
+        result = subprocess.run(
+            ["bash", "scripts/demo.sh"],
+            cwd=ROOT, capture_output=True, text=True, timeout=180, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        output = result.stdout
+        self.assertIn("2 verified fixed", output)
+        self.assertIn("verified  py.sql-dynamic", output)
+        self.assertIn("verified  py.shell-dynamic", output)
+        self.assertIn("dismissed py.request-no-timeout", output)
+        self.assertIn("Confirmed reachable from the public /user endpoint.", output)
+
+    def test_it_leaves_the_repository_untouched(self):
+        import subprocess
+        from .helpers import ROOT
+
+        before = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
+                                capture_output=True, text=True, check=False).stdout
+        subprocess.run(["bash", "scripts/demo.sh"], cwd=ROOT,
+                       capture_output=True, text=True, timeout=180, check=False)
+        after = subprocess.run(["git", "status", "--porcelain"], cwd=ROOT,
+                               capture_output=True, text=True, check=False).stdout
+        self.assertEqual(before, after)
