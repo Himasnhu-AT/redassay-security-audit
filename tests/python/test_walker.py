@@ -140,3 +140,39 @@ class BinaryDetectionTest(TempRepo):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExcludeTestsTest(TempRepo):
+    """Driven by the Django evaluation: 59% of findings came from its test suite."""
+
+    def setUp(self):
+        super().setUp()
+        self.write("app/main.py", "x = 1\n")
+        self.write("tests/test_main.py", "x = 1\n")
+        self.write("app/main_test.go", "x = 1\n")
+        self.write("src/component.test.js", "x = 1\n")
+        self.write("spec/thing_spec.rb", "x = 1\n")
+        self.write("app/contest.py", "x = 1\n")          # not a test directory
+
+    def test_off_by_default(self):
+        paths = {f.path for f in collect(self.root)}
+        self.assertIn("tests/test_main.py", paths)
+        self.assertIn("src/component.test.js", paths)
+
+    def test_test_directories_are_skipped(self):
+        paths = {f.path for f in collect(self.root, WalkOptions(exclude_tests=True))}
+        self.assertNotIn("tests/test_main.py", paths)
+        self.assertNotIn("spec/thing_spec.rb", paths)
+
+    def test_test_files_outside_test_directories_are_skipped(self):
+        paths = {f.path for f in collect(self.root, WalkOptions(exclude_tests=True))}
+        self.assertNotIn("app/main_test.go", paths)
+        self.assertNotIn("src/component.test.js", paths)
+
+    def test_production_code_is_kept(self):
+        paths = {f.path for f in collect(self.root, WalkOptions(exclude_tests=True))}
+        self.assertIn("app/main.py", paths)
+
+    def test_a_name_that_merely_contains_test_is_kept(self):
+        paths = {f.path for f in collect(self.root, WalkOptions(exclude_tests=True))}
+        self.assertIn("app/contest.py", paths)

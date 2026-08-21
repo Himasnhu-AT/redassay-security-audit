@@ -536,3 +536,17 @@ class InitTemplateTest(CliTestCase):
     def test_json_reports_what_it_created(self):
         payload = self.run_json("init")
         self.assertIn(".redassayignore", payload["created"])
+
+
+class ExcludeTestsFlagTest(CliTestCase):
+    def test_the_flag_narrows_the_scan(self):
+        self.write("app.py", VULNERABLE)
+        self.write("tests/test_app.py", VULNERABLE)
+        everything = self.run_json("scan")["scan"]["files_scanned"]
+        narrowed = self.run_json("scan", "--exclude-tests")["scan"]["files_scanned"]
+        self.assertLess(narrowed, everything)
+
+    def test_findings_in_test_code_disappear(self):
+        self.write("tests/test_app.py", VULNERABLE)
+        paths = {f["location"]["path"] for f in self.run_json("scan", "--exclude-tests")["findings"]}
+        self.assertEqual(paths, set())
