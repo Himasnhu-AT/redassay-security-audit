@@ -22,6 +22,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Confirm the engine has no dependencies
         run: python3 tools/check_stdlib_only.py
+      - name: Validate the plugin structure
+        run: python3 tools/validate_plugin.py
+      - name: Confirm the rule catalogue is current
+        run: python3 tools/generate_rule_docs.py --check
       - run: python3 -m unittest discover -s tests/python -t . -p 'test_*.py' -v
 
   javascript:
