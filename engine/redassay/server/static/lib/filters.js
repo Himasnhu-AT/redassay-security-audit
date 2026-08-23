@@ -74,6 +74,17 @@ export function countBySeverity(findings) {
   return counts;
 }
 
+/** Counts per scanner, for the "found by" facet. `claude` appears here too,
+ *  which is the point: a reviewer often wants to read the model's findings
+ *  separately from the deterministic ones. */
+export function countBySource(findings) {
+  const counts = {};
+  for (const finding of findings || []) {
+    counts[finding.source] = (counts[finding.source] || 0) + 1;
+  }
+  return counts;
+}
+
 export function countByStatus(findings) {
   const counts = {};
   for (const finding of findings || []) {

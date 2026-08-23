@@ -100,6 +100,16 @@ export function severityChip(name, count, active) {
   );
 }
 
+/** A facet chip for any facet. Keeps the escaping in one place. */
+export function facetChip(facet, value, count, active, label = null) {
+  return (
+    `<button class="chip ${active ? "on" : ""}" data-facet="${escapeHtml(facet)}" ` +
+    `data-value="${escapeHtml(value)}">${escapeHtml(label || value)}` +
+    (count === null ? "" : `<span class="n">${count}</span>`) +
+    `</button>`
+  );
+}
+
 export function hotspotRow(spot) {
   return (
     `<li data-path="${escapeHtml(spot.path)}" title="${escapeHtml(spot.path)}">` +

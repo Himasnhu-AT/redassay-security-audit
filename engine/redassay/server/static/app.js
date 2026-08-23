@@ -3,9 +3,12 @@
 
 import { escapeHtml, relativeTime, severitySummary } from "./lib/format.js";
 import {
-  classification, codeBlock, commentList, findingRow, headerCounts, hotspotRow, severityChip,
+  classification, codeBlock, commentList, facetChip, findingRow, headerCounts,
+  hotspotRow, severityChip,
 } from "./lib/render.js";
-import { applyFilters, countBySeverity, countByStatus, toggle, DEFAULT_FILTERS } from "./lib/filters.js";
+import {
+  applyFilters, countBySeverity, countBySource, countByStatus, toggle, DEFAULT_FILTERS,
+} from "./lib/filters.js";
 import { Selection, describeBatch } from "./lib/selection.js";
 
 const STATUS_CHOICES = ["open", "confirmed", "queued", "fixing", "fixed", "verified", "dismissed"];
@@ -85,6 +88,14 @@ function renderFacets() {
   // redassay: ignore xss.innerhtml-assignment - STATUS_CHOICES is a module constant
   el("facet-status").innerHTML = STATUS_CHOICES
     .map((name) => chip(name, statusCounts[name] || 0, state.filters.statuses.includes(name), "status"))
+    .join("");
+
+  // redassay: ignore xss.innerhtml-assignment - SORT_CHOICES is a module constant
+  const sourceCounts = countBySource(state.findings);
+  // redassay: ignore xss.innerhtml-assignment - facetChip() escapes, see lib/render.js
+  el("facet-source").innerHTML = Object.keys(sourceCounts)
+    .sort()
+    .map((name) => facetChip("source", name, sourceCounts[name], state.filters.sources.includes(name)))
     .join("");
 
   // redassay: ignore xss.innerhtml-assignment - SORT_CHOICES is a module constant
@@ -356,6 +367,7 @@ function wire() {
       if (facet === "sort") state.filters.sort = value;
       if (facet === "severity") state.filters.severities = toggle(state.filters.severities, value);
       if (facet === "status") state.filters.statuses = toggle(state.filters.statuses, value);
+      if (facet === "source") state.filters.sources = toggle(state.filters.sources, value);
       renderFacets();
       renderList();
       return;
