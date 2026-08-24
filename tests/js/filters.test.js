@@ -6,6 +6,7 @@ import {
   matchesQuery,
   matchesFilters,
   countBySeverity,
+  countBySource,
   countByStatus,
   groupByFile,
   toggle,
@@ -132,4 +133,28 @@ test("toggle adds, removes and does not mutate", () => {
   assert.deepEqual(toggle(original, "low").sort(), ["high", "low"]);
   assert.deepEqual(toggle(original, "high"), []);
   assert.deepEqual(original, ["high"]);
+});
+
+test("countBySource groups by scanner", () => {
+  const items = [
+    finding({ source: "python-ast" }),
+    finding({ id: "b", source: "python-ast" }),
+    finding({ id: "c", source: "claude" }),
+  ];
+  assert.deepEqual(countBySource(items), { "python-ast": 2, claude: 1 });
+});
+
+test("the source filter narrows to one scanner", () => {
+  const items = [
+    finding({ id: "a", source: "pattern" }),
+    finding({ id: "b", source: "claude" }),
+  ];
+  const filtered = applyFilters(items, { sources: ["claude"] });
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].id, "b");
+});
+
+test("an empty source list means no source filtering", () => {
+  const items = [finding({ id: "a", source: "pattern" }), finding({ id: "b", source: "claude" })];
+  assert.equal(applyFilters(items, { sources: [] }).length, 2);
 });

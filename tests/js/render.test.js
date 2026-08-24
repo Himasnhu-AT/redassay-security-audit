@@ -10,6 +10,7 @@ import {
   headerCounts,
   severityChip,
   hotspotRow,
+  facetChip,
 } from "../../engine/redassay/server/static/lib/render.js";
 
 const XSS = '<img src=x onerror=alert(1)>';
@@ -146,4 +147,16 @@ test("classification returns nothing when there is nothing to classify", () => {
 
 test("headerCounts falls back when everything is clean", () => {
   assert.ok(headerCounts({}).includes("no open findings"));
+});
+
+test("facetChip escapes facet, value and label", () => {
+  const html = facetChip("source", XSS, 3, false);
+  assert.ok(!html.includes("<img"));
+  assert.ok(html.includes('data-facet="source"'));
+  assert.ok(html.includes(">3<"));
+});
+
+test("facetChip omits the count when null", () => {
+  assert.ok(!facetChip("sort", "risk", null, true).includes('class="n"'));
+  assert.ok(facetChip("sort", "risk", null, true).includes("on"));
 });
