@@ -152,3 +152,37 @@ class RuleCoverageTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ConstantTimeCompareTest(unittest.TestCase):
+    """Found by redassay scanning itself: a regex parser comparing a parse
+    `token` against `"\\\\"` was reported as a non-constant-time secret check."""
+
+    def test_a_parser_comparing_short_literals_is_not_a_signature_check(self):
+        code = (
+            "for token in pattern:\n"
+            '    if token == "\\\\":\n'
+            '        escaped = True\n'
+            '    elif token == "[":\n'
+            "        in_class = True\n"
+        )
+        self.assertNotIn("crypto.constant-time-compare",
+                         pattern_rules("engine/parser.py", code, "python"))
+
+    def test_a_real_signature_comparison_is_still_flagged(self):
+        code = (
+            "def verify(body, signature):\n"
+            "    expected = hmac.new(KEY, body, hashlib.sha256).hexdigest()\n"
+            "    return expected == signature\n"
+        )
+        self.assertIn("crypto.constant-time-compare",
+                      pattern_rules("app/auth.py", code, "python"))
+
+    def test_compare_digest_is_accepted(self):
+        code = (
+            "def verify(body, signature):\n"
+            "    expected = hmac.new(KEY, body, hashlib.sha256).hexdigest()\n"
+            "    return hmac.compare_digest(expected, signature)\n"
+        )
+        self.assertNotIn("crypto.constant-time-compare",
+                         pattern_rules("app/auth.py", code, "python"))
