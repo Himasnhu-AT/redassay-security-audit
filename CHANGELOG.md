@@ -17,8 +17,9 @@ First release.
 
 ### Detection
 
-- 108 pattern rules across 11 packs: injection, XSS, deserialization, crypto,
-  access control, SSRF, misconfiguration, JVM, Go, PHP/Ruby, API/mobile.
+- 115 rules across 12 packs: injection, XSS, deserialization, crypto,
+  access control, SSRF, misconfiguration, exposure, JVM, Go, PHP/Ruby,
+  API/mobile.
 - A Python AST scanner with intra-procedural taint tracking, which raises
   severity on a confirmed data path and lowers it when the function guards the
   value first.
@@ -57,7 +58,7 @@ First release.
 
 ### Testing
 
-- 611 Python tests and 54 JavaScript tests, neither needing an install.
+- 670 Python tests and 59 JavaScript tests, neither needing an install.
 - A control fixture of safe code that must produce zero high-confidence
   findings, and a regression suite built from false positives that real
   repositories produced.

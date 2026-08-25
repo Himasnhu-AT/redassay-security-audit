@@ -69,8 +69,8 @@ can do.
 
 ## Tests
 
-- Python: `unittest`, no pytest. 611 tests, no dependencies.
-- JavaScript: `node:test`. 54 tests over the board's modules.
+- Python: `unittest`, no pytest. 670 tests, no dependencies.
+- JavaScript: `node:test`. 59 tests over the board's modules.
 - Both: `bash scripts/run-tests.sh`
 
 If you fix a false positive, add it to `tests/python/test_false_positives.py`

@@ -118,7 +118,7 @@ Full command reference: [`docs/cli.md`](docs/cli.md).
 
 ## What it detects
 
-108 rules across nine packs, plus four scanners that do more than match text.
+115 rules across 12 packs, plus four scanners that do more than match text.
 
 **Injection** — SQL, command, code, template, LDAP, XPath, NoSQL operator
 injection, across Python, JS/TS, Ruby, PHP, Java, Go, C#.
@@ -152,6 +152,10 @@ files, Terraform, cloud IAM.
 **Crypto and access control** — weak hashes on passwords, ECB, static IVs,
 disabled TLS verification, JWT signature bypass, non-constant-time comparison,
 path traversal, IDOR shapes, CORS misconfiguration, CSRF.
+
+**Exposure** — credentials and personal data written to logs, diagnostic
+endpoints with no auth guard, tracebacks rendered into responses, privileged
+actions with no audit trail.
 
 Rule details: [`docs/rules.md`](docs/rules.md). Writing your own:
 [`docs/writing-rules.md`](docs/writing-rules.md).
@@ -193,8 +197,8 @@ engine/redassay/   the scanner - stdlib only
   scanners/        pattern, secrets, python-ast, javascript, deps, cicd, configs
   rules/           nine JSON rule packs
   server/          the board: HTTP server, JSON API, static UI
-tests/python/      582 unittest tests
-tests/js/          34 node:test tests for the board's modules
+tests/python/      670 unittest tests
+tests/js/          59 node:test tests for the board's modules
 fixtures/          vulnerable apps, and one clean control app
 ```
 
