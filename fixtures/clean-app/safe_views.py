@@ -104,3 +104,42 @@ def promote(user):
 
 def get_connection():
     raise NotImplementedError
+
+
+def authenticate(username: str, password: str) -> bool:
+    """The safe form of the exposure pack's first rule.
+
+    Log that a credential was present, never what it was - logs outlive the
+    credential and are read by people who were never granted it.
+    """
+    import logging
+
+    logging.getLogger(__name__).info(
+        "login attempt user=%s credential_present=%s", username, bool(password)
+    )
+    return _verify(username, password)
+
+
+def handle_error(exc: Exception, correlation_id: str) -> dict:
+    """Trace to the log, identifier to the client."""
+    import logging
+
+    logging.getLogger(__name__).exception("request %s failed", correlation_id)
+    return {"error": "internal error", "correlation_id": correlation_id}
+
+
+def promote_to_admin(actor, target) -> dict:
+    """Every privilege change leaves a record naming who, what and when."""
+    import logging
+
+    if not actor.is_admin:
+        raise PermissionError("not an admin")
+    previous, target.role = target.role, "admin"
+    logging.getLogger("audit").info(
+        "role_change actor=%s target=%s from=%s to=%s", actor.id, target.id, previous, target.role
+    )
+    return {"ok": True}
+
+
+def _verify(username: str, password: str) -> bool:
+    raise NotImplementedError
