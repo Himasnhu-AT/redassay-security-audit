@@ -58,6 +58,9 @@ jobs:
               exit 1
             fi
           done
+      - name: The demo still walks the whole loop
+        run: bash scripts/demo.sh
+
       - name: The clean fixture stays clean
         run: |
           set -euo pipefail
