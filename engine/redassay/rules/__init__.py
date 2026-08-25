@@ -15,6 +15,12 @@ PACK_DIR = os.path.dirname(os.path.abspath(__file__))
 
 REQUIRED_FIELDS = ("id", "title", "pattern")
 
+#: Optional self-test fields. `examples` are lines the rule must match;
+#: `counterexamples` are lines it must not. Keeping them next to the rule beats
+#: a fixture file per rule: the sample and the pattern are edited together, so
+#: they cannot drift, and 115 rules do not need 115 files.
+EXAMPLE_FIELDS = ("examples", "counterexamples")
+
 
 class RuleError(ValueError):
     pass
@@ -24,6 +30,10 @@ def _validate(rule: Dict[str, Any], origin: str) -> None:
     missing = [f for f in REQUIRED_FIELDS if not rule.get(f)]
     if missing:
         raise RuleError(f"{origin}: rule {rule.get('id', '?')} missing {', '.join(missing)}")
+    for field in EXAMPLE_FIELDS:
+        value = rule.get(field)
+        if value is not None and not isinstance(value, list):
+            raise RuleError(f"{origin}: rule {rule['id']}: {field} must be a list of strings")
 
 
 def load_pack(path: str) -> List[Dict[str, Any]]:
