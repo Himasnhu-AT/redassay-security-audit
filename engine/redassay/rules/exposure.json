@@ -1,0 +1,203 @@
+{
+  "pack": "exposure",
+  "defaults": {
+    "owasp": [
+      "A09:2021 Security Logging and Monitoring Failures"
+    ],
+    "tags": [
+      "exposure"
+    ]
+  },
+  "rules": [
+    {
+      "id": "expose.credential-logged",
+      "title": "Credential or token written to a log",
+      "severity": "high",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "ruby",
+        "php",
+        "csharp"
+      ],
+      "pattern": "\\b(log(ger)?|console|print|fmt|System\\.out)\\s*[\\.(]\\s*\\w*\\s*\\(?[^;\\n]*\\b(password|passwd|secret|api[_-]?key|token|credential|private[_-]?key|authorization|session[_-]?id)\\b",
+      "ignore_case": true,
+      "not_pattern": "(redact|mask|\\*{3,}|len\\(|\\.length|scrub|sanitiz|\\bhas_|\\bis_|not set|missing|omitted)",
+      "description": "Logs are copied to aggregators, shipped to third parties, kept far longer than the credential is valid, and read by people who would never be granted the secret directly. A credential in a log line is a credential with a much larger blast radius than intended.",
+      "remediation": "Log that the value was present, not what it was: `log.info(\"auth header present: %s\", bool(header))`. If you must correlate, log a hash prefix.",
+      "cwe": [
+        "CWE-532"
+      ]
+    },
+    {
+      "id": "expose.pii-logged",
+      "title": "Personal data written to a log",
+      "severity": "medium",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "ruby",
+        "php",
+        "csharp"
+      ],
+      "pattern": "\\b(log(ger)?|console|print)\\s*[\\.(]\\s*\\w*\\s*\\(?[^;\\n]*\\b(ssn|social_security|credit_card|card_number|cvv|passport|date_of_birth|dob|national_id|tax_id|iban)\\b",
+      "ignore_case": true,
+      "not_pattern": "(redact|mask|\\*{3,}|last4|last_four|hash)",
+      "description": "Personal data in logs turns a log retention policy into a data retention policy, usually without anyone deciding that. It also puts the data outside whatever access controls the database has.",
+      "remediation": "Log a stable pseudonymous identifier instead, and keep the mapping in the system of record.",
+      "cwe": [
+        "CWE-532"
+      ],
+      "owasp": [
+        "A02:2021 Cryptographic Failures"
+      ]
+    },
+    {
+      "id": "expose.directory-listing",
+      "title": "Directory listing enabled",
+      "severity": "medium",
+      "confidence": "high",
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "yaml",
+        "nginx",
+        "apache",
+        "ini"
+      ],
+      "pattern": "(serve-?index|autoindex\\s+on|Options\\s+[+]?Indexes|directory_listing\\s*[:=]\\s*(True|true)|show_indexes\\s*=\\s*True)",
+      "description": "A listed directory hands an attacker the filenames - backups, editor swap files, old versions - that they would otherwise have to guess.",
+      "remediation": "Turn listing off and serve an explicit index.",
+      "cwe": [
+        "CWE-548"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "expose.debug-endpoint",
+      "title": "Diagnostic endpoint registered without an auth guard",
+      "severity": "high",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "go",
+        "java",
+        "ruby"
+      ],
+      "pattern": "[\\\"'`]/(debug|_debug|admin/debug|phpinfo|env|_env|actuator|metrics|heapdump|threaddump|pprof|__debug__|console)[\\\"'`/]",
+      "nearby_absent": "(login_required|requires_auth|authenticate|authorize|@jwt|permission|admin_only|internal_only|Depends\\s*\\()",
+      "nearby_window": 5,
+      "description": "Diagnostic endpoints expose environment variables, heap contents, goroutine stacks or a live console. Spring Boot Actuator, Go's pprof and Werkzeug's console have all been the entry point in real incidents.",
+      "remediation": "Bind them to an internal interface, or put them behind the same authorization as the admin surface.",
+      "cwe": [
+        "CWE-489"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "expose.backup-file-served",
+      "title": "Backup or editor artefact in a served directory",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "*"
+      ],
+      "path_include": [
+        "public/**",
+        "static/**",
+        "www/**",
+        "htdocs/**",
+        "dist/**",
+        "assets/**"
+      ],
+      "pattern": ".",
+      "path_exclude": [
+        "*.js",
+        "*.css",
+        "*.html",
+        "*.svg",
+        "*.png",
+        "*.jpg",
+        "*.json",
+        "*.map",
+        "*.txt",
+        "*.md",
+        "*.ico",
+        "*.woff*"
+      ],
+      "max_matches": 1,
+      "description": "A file in a web-served directory whose extension is not something a browser asks for is usually an artefact: a .bak, a .orig, an editor swap file, a copied config. Those are read as plain text by anyone who guesses the name.",
+      "remediation": "Remove it from the served directory and add the pattern to .gitignore and the deployment exclusion list.",
+      "cwe": [
+        "CWE-530"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "expose.stack-trace-rendered",
+      "title": "Traceback rendered into a response or template",
+      "severity": "medium",
+      "confidence": "medium",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "php",
+        "ruby"
+      ],
+      "pattern": "(traceback\\.format_exc\\s*\\(|\\.printStackTrace\\s*\\(|debug_backtrace\\s*\\(|\\.stack\\b)",
+      "nearby": "(render|return|res\\.(send|json|render)|response|template|echo|print)",
+      "nearby_window": 3,
+      "not_pattern": "(log(ger)?\\.|console\\.error|capture|sentry|rollbar)",
+      "description": "A traceback names file paths, library versions, and often fragments of the query or the credential that failed. It is a map of the application handed to whoever triggered the error.",
+      "remediation": "Log the trace with a correlation id, return the id and a generic message.",
+      "cwe": [
+        "CWE-209"
+      ],
+      "owasp": [
+        "A05:2021 Security Misconfiguration"
+      ]
+    },
+    {
+      "id": "expose.no-audit-on-privileged-action",
+      "title": "Privileged action with no audit log nearby",
+      "severity": "low",
+      "confidence": "low",
+      "languages": [
+        "python",
+        "javascript",
+        "typescript",
+        "java",
+        "go",
+        "ruby"
+      ],
+      "pattern": "\\b(grant_admin|make_admin|set_role|elevate|impersonate|delete_account|disable_mfa|reset_password|rotate_key|revoke_all)\\s*\\(",
+      "nearby_absent": "(audit|log(ger)?\\.|record_event|track|emit|journal)",
+      "nearby_window": 5,
+      "description": "An action that changes who can do what, with nothing recording that it happened. The first question in every incident is who did this and when, and an unlogged privilege change has no answer.",
+      "remediation": "Emit an audit record with the actor, the target, the old and new state, and the request id.",
+      "cwe": [
+        "CWE-778"
+      ],
+      "not_pattern": "^\\s*(def|function|async def|class)\\s|=>\\s*\\{?\\s*$"
+    }
+  ]
+}

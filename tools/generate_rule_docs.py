@@ -39,6 +39,7 @@ PACK_BLURBS = {
     "golang": "Go: query construction, TLS, math/rand, discarded errors from verification calls.",
     "php-ruby": "PHP superglobals reaching dangerous sinks, and Ruby's dynamic dispatch and mass assignment.",
     "api-mobile": "API surface and mobile manifests: GraphQL, rate limiting, error verbosity, exported components.",
+    "exposure": "Information that leaks out sideways: credentials and personal data in logs, diagnostic endpoints, tracebacks in responses, privileged actions with no audit trail.",
 }
 
 
