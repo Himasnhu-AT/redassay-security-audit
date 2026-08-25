@@ -158,6 +158,22 @@ def markdown(findings: Sequence[Finding], title: str = "Security audit", repo: s
     return "\n".join(out)
 
 
+def quickfix(findings: Sequence[Finding]) -> str:
+    """`path:line:col: severity: message [rule]` - the grep/compiler convention.
+
+    Every editor already knows how to jump through this format: vim's :cfile,
+    emacs compilation-mode, VS Code's problem matchers. Producing it is four
+    lines of code and removes the need for a plugin per editor.
+    """
+    lines = []
+    for finding in findings:
+        lines.append(
+            f"{finding.path}:{max(finding.line, 1)}:1: "
+            f"{finding.severity}: {finding.title} [{finding.rule_id}]"
+        )
+    return "\n".join(lines)
+
+
 def as_json(findings: Sequence[Finding], extra: Optional[Dict[str, Any]] = None) -> str:
     payload: Dict[str, Any] = {
         "findings": [finding.to_dict() for finding in findings],
