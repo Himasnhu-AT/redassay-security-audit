@@ -550,3 +550,12 @@ class ExcludeTestsFlagTest(CliTestCase):
         self.write("tests/test_app.py", VULNERABLE)
         paths = {f["location"]["path"] for f in self.run_json("scan", "--exclude-tests")["findings"]}
         self.assertEqual(paths, set())
+
+
+class QuickfixFormatTest(CliTestCase):
+    def test_report_emits_quickfix_lines(self):
+        self.seed()
+        out = self.run_cli("report", "--format", "quickfix")[1]
+        for line in out.splitlines():
+            if line.strip():
+                self.assertRegex(line, r"^[\w./-]+:\d+:\d+: \w+: .+ \[[\w.-]+\]$")

@@ -141,3 +141,28 @@ class SarifTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class QuickfixTest(unittest.TestCase):
+    def test_matches_the_grep_convention(self):
+        line = report.quickfix(sample()).splitlines()[0]
+        self.assertTrue(line.startswith("app/views.py:42:1: critical: "))
+        self.assertTrue(line.endswith("[py.sql-dynamic]"))
+
+    def test_every_finding_gets_a_line(self):
+        findings = [
+            make_finding(rule_id=f"r{i}", location=Location(path=f"{i}.py", line=i + 1, snippet="x"))
+            for i in range(4)
+        ]
+        self.assertEqual(len(report.quickfix(findings).splitlines()), 4)
+
+    def test_line_zero_is_clamped_so_editors_can_jump(self):
+        finding = make_finding(location=Location(path="a.py", line=0, snippet="x"))
+        self.assertIn("a.py:1:1:", report.quickfix([finding]))
+
+    def test_empty(self):
+        self.assertEqual(report.quickfix([]), "")
+
+    def test_it_is_single_line_per_finding(self):
+        finding = make_finding(description="a\nmultiline\ndescription")
+        self.assertEqual(len(report.quickfix([finding]).splitlines()), 1)
