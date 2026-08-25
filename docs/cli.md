@@ -187,6 +187,21 @@ has everything it needs in one call.
 redassay report --format markdown -o SECURITY-AUDIT.md
 redassay report --format sarif -o redassay.sarif
 redassay report --format json
+redassay report --format quickfix
+```
+
+`quickfix` emits `path:line:col: severity: message [rule]` - the convention every
+editor already knows how to jump through:
+
+```vim
+:cexpr system('redassay report --format quickfix')
+:copen
+```
+
+```bash
+# emacs compilation-mode, VS Code problem matchers, and anything else that
+# parses compiler output will take it as-is.
+redassay report --format quickfix > findings.txt
 ```
 
 SARIF output carries `security-severity` and stable `partialFingerprints`, so
