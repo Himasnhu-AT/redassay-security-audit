@@ -559,3 +559,50 @@ class QuickfixFormatTest(CliTestCase):
         for line in out.splitlines():
             if line.strip():
                 self.assertRegex(line, r"^[\w./-]+:\d+:\d+: \w+: .+ \[[\w.-]+\]$")
+
+
+class HistoryTest(CliTestCase):
+    def test_history_without_scans(self):
+        self.write("app.py", VULNERABLE)
+        self.run_cli("init")
+        self.assertIn("no scans recorded", self.run_cli("history")[1])
+
+    def test_history_shows_one_row_per_scan(self):
+        self.seed()
+        self.run_cli("scan", "--quiet")
+        payload = self.run_json("history")
+        self.assertEqual(payload["count"], 2)
+        self.assertIn("counts", payload["scans"][0])
+
+    def test_history_renders_a_table(self):
+        self.seed()
+        out = self.run_cli("history")[1]
+        self.assertIn("when", out)
+        self.assertIn("crit", out)
+
+    def test_limit(self):
+        self.seed()
+        for _ in range(3):
+            self.run_cli("scan", "--quiet")
+        self.assertEqual(self.run_json("history", "--limit", "2")["count"], 2)
+
+
+class PruneTest(CliTestCase):
+    def test_dry_run_changes_nothing(self):
+        self.seed()
+        before = len(Store.open(self.root))
+        out = self.run_cli("prune", "--older-than", "0", "--status", "open", "--dry-run")[1]
+        self.assertIn("would remove", out)
+        self.assertEqual(len(Store.open(self.root)), before)
+
+    def test_prune_removes_and_persists(self):
+        self.seed()
+        before = len(Store.open(self.root))
+        self.run_cli("prune", "--older-than", "0", "--status", "open")
+        self.assertLess(len(Store.open(self.root)), before)
+
+    def test_defaults_to_verified_only(self):
+        self.seed()
+        before = len(Store.open(self.root))
+        self.run_cli("prune", "--older-than", "0")
+        self.assertEqual(len(Store.open(self.root)), before)

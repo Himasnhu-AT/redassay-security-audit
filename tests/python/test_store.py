@@ -187,3 +187,47 @@ class MigrationTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PruneTest(TempRepo):
+    def _aged(self, days: int, status: str = models.VERIFIED, rule_id: str = "r"):
+        import datetime as dt
+        when = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)).isoformat()
+        finding = make_finding(rule_id=rule_id, status=status,
+                               location=Location(path=f"{rule_id}.py", line=1, snippet="x"))
+        finding.last_seen = when
+        finding.fix = Fix(summary="fixed", applied_at=when)
+        return finding
+
+    def test_old_verified_findings_are_dropped(self):
+        store = Store.open(self.root)
+        store.put(self._aged(200, rule_id="old"))
+        store.put(self._aged(5, rule_id="recent"))
+        removed = store.prune(older_than_days=90)
+        self.assertEqual(len(removed), 1)
+        self.assertEqual(len(store), 1)
+
+    def test_open_findings_are_never_pruned(self):
+        store = Store.open(self.root)
+        store.put(self._aged(500, status=models.OPEN, rule_id="open"))
+        self.assertEqual(store.prune(older_than_days=1), [])
+
+    def test_dismissals_are_only_pruned_when_asked(self):
+        store = Store.open(self.root)
+        store.put(self._aged(500, status=models.DISMISSED, rule_id="dismissed"))
+        self.assertEqual(store.prune(older_than_days=1), [])
+        self.assertEqual(len(store.prune(older_than_days=1, statuses=[models.DISMISSED])), 1)
+
+    def test_an_unparseable_timestamp_is_left_alone(self):
+        store = Store.open(self.root)
+        finding = make_finding(status=models.VERIFIED)
+        finding.last_seen = "not a date"
+        finding.fix = Fix(summary="x", applied_at="also not a date")
+        store.put(finding)
+        self.assertEqual(store.prune(older_than_days=1), [])
+
+    def test_scans_returns_the_history(self):
+        store = Store.open(self.root)
+        for index in range(3):
+            store.record_scan({"total": index})
+        self.assertEqual([entry["total"] for entry in store.scans()], [0, 1, 2])
