@@ -494,6 +494,64 @@ def cmd_rules(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_history(args: argparse.Namespace) -> int:
+    """Scan-over-scan trend. Answers "is this getting better or worse"."""
+    store = _require_store(args.root)
+    if store is None:
+        return EXIT_ERROR
+    scans = store.scans()[-args.limit:]
+    if args.json:
+        _emit_json({"scans": scans, "count": len(scans)})
+        return EXIT_OK
+    if not scans:
+        _out("no scans recorded yet")
+        return EXIT_OK
+
+    _out(f"{'when':<21}{'files':>7}{'total':>7}{'crit':>6}{'high':>6}{'med':>6}{'new':>6}{'fixed':>7}")
+    previous: Optional[int] = None
+    for entry in scans:
+        counts = entry.get("counts") or {}
+        merge = entry.get("merge") or {}
+        total = entry.get("total", 0)
+        arrow = ""
+        if previous is not None and total != previous:
+            arrow = " +" if total > previous else " -"
+            arrow += str(abs(total - previous))
+        previous = total
+        _out(
+            f"{entry.get('started_at', '')[:19]:<21}"
+            f"{entry.get('files_scanned', 0):>7}"
+            f"{total:>7}"
+            f"{counts.get('critical', 0):>6}"
+            f"{counts.get('high', 0):>6}"
+            f"{counts.get('medium', 0):>6}"
+            f"{len(merge.get('added') or []):>6}"
+            f"{len(merge.get('verified') or []):>7}"
+            f"{arrow}"
+        )
+    return EXIT_OK
+
+
+def cmd_prune(args: argparse.Namespace) -> int:
+    """Drop settled findings that have been settled for a while."""
+    store = _require_store(args.root)
+    if store is None:
+        return EXIT_ERROR
+    statuses = args.status or [models.VERIFIED]
+    removed = store.prune(older_than_days=args.older_than, statuses=statuses)
+    if not args.dry_run and removed:
+        store.save()
+    if args.json:
+        _emit_json({"removed": removed, "count": len(removed), "dry_run": args.dry_run})
+    else:
+        verb = "would remove" if args.dry_run else "removed"
+        _out(f"{verb} {len(removed)} findings "
+             f"({', '.join(statuses)} for more than {args.older_than} days)")
+        if args.dry_run and removed:
+            _out("re-run without --dry-run to apply")
+    return EXIT_OK
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     """Answer "why is this not working" without a round trip.
 
@@ -863,6 +921,17 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("rules", help="list loaded rules", parents=[common])
     p.add_argument("--pack", default=None)
     p.set_defaults(func=cmd_rules)
+
+    p = sub.add_parser("history", help="scan-over-scan trend", parents=[common])
+    p.add_argument("--limit", type=int, default=20)
+    p.set_defaults(func=cmd_history)
+
+    p = sub.add_parser("prune", help="drop long-settled findings from the store", parents=[common])
+    p.add_argument("--older-than", type=int, default=90, metavar="DAYS")
+    p.add_argument("--status", action="append", choices=models.STATUSES,
+                   help="which statuses to prune (default: verified)")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(func=cmd_prune)
 
     p = sub.add_parser("doctor", help="check the environment and the store", parents=[common])
     p.set_defaults(func=cmd_doctor)
