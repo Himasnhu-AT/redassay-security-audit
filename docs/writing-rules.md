@@ -116,8 +116,40 @@ unread too.
 
 ## Testing a rule
 
-Add a labelled sample to `fixtures/vuln-polyglot/` and the safe form to
-`fixtures/clean-app/`:
+**Put the samples in the rule.** Every rule carries `examples` (lines it must
+match) and `counterexamples` (lines it must not):
+
+```json
+{
+  "id": "house.legacy-db-helper",
+  "pattern": "\\blegacy_query\\s*\\(",
+  "not_pattern": "legacy_query\\s*\\(\\s*[\"'][^\"']*[\"']\\s*\\)",
+  "examples": ["rows = legacy_query(\"SELECT * FROM t WHERE n = '\" + name)"],
+  "counterexamples": ["rows = legacy_query(\"SELECT * FROM t\")"]
+}
+```
+
+`tests/python/test_rule_examples.py` runs each one through the scanner. This is
+the cheapest and highest-yield test in the project: introducing it found seven
+rules that were silently broken, including five whose literal matcher used
+`[^"']*` and therefore could never match the quote *inside* a SQL or XPath
+string - `"WHERE name = '"` never matched, in the most-used rule in the pack.
+
+The counterexample matters as much as the example. A rule with a `not_pattern`
+or a `nearby_absent` exists *because* of a false positive; the line that caused
+it belongs in the pack, so the next person tightening the regex cannot
+reintroduce it.
+
+Two rules failed on their own counterexamples immediately: a credential-logging
+rule that flagged `log.info("token present=%s", bool(token))` - its own
+recommended fix - and a debug-endpoint rule whose guard list was snake_case only
+and so missed every Express `requiresAuth` middleware.
+
+### Fixtures, for anything the samples cannot express
+
+A one-line sample cannot exercise a proximity guard across functions, or the
+interaction between several rules. For those, add a labelled sample to
+`fixtures/vuln-polyglot/` and the safe form to `fixtures/clean-app/`:
 
 ```python
 # VULN: house.legacy-db-helper
