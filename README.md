@@ -177,6 +177,9 @@ A scanner is only as useful as its noise floor. The measures taken here:
   by confidence, so a confident `high` sits above a speculative `critical`.
 - **Suppression that sticks.** `# redassay: ignore <rule> - <reason>` in the
   source, or a dismissal on the board. Neither comes back on the next scan.
+- **Rules that test themselves.** Each one carries an example it must match and
+  a counterexample it must not, run by the suite. Adding that found seven rules
+  that were silently broken.
 
 `tests/python/test_false_positives.py` is a regression suite built from findings
 that real repositories produced and a human rejected.
