@@ -26,6 +26,8 @@ jobs:
         run: python3 tools/validate_plugin.py
       - name: Confirm the rule catalogue is current
         run: python3 tools/generate_rule_docs.py --check
+      - name: Every rule matches its own example
+        run: python3 -m unittest tests.python.test_rule_examples -v
       - run: python3 -m unittest discover -s tests/python -t . -p 'test_*.py' -v
 
   javascript:
