@@ -26,11 +26,17 @@
       ],
       "pattern": "\\b(log(ger)?|console|print|fmt|System\\.out)\\s*[\\.(]\\s*\\w*\\s*\\(?[^;\\n]*\\b(password|passwd|secret|api[_-]?key|token|credential|private[_-]?key|authorization|session[_-]?id)\\b",
       "ignore_case": true,
-      "not_pattern": "(redact|mask|\\*{3,}|len\\(|\\.length|scrub|sanitiz|\\bhas_|\\bis_|not set|missing|omitted)",
+      "not_pattern": "(redact|mask|\\*{3,}|scrub|sanitiz|bool\\s*\\(|present|len\\s*\\(|\\.length|\\bhas_|\\bis_|not set|missing|omitted|_present|_set\\b|is None|== None)",
       "description": "Logs are copied to aggregators, shipped to third parties, kept far longer than the credential is valid, and read by people who would never be granted the secret directly. A credential in a log line is a credential with a much larger blast radius than intended.",
       "remediation": "Log that the value was present, not what it was: `log.info(\"auth header present: %s\", bool(header))`. If you must correlate, log a hash prefix.",
       "cwe": [
         "CWE-532"
+      ],
+      "examples": [
+        "log.info(\"auth token=%s\", token)"
+      ],
+      "counterexamples": [
+        "log.info(\"auth token present=%s\", bool(token))"
       ]
     },
     {
@@ -58,6 +64,12 @@
       ],
       "owasp": [
         "A02:2021 Cryptographic Failures"
+      ],
+      "examples": [
+        "log.info(\"applicant ssn=%s\", ssn)"
+      ],
+      "counterexamples": [
+        "log.info(\"applicant ssn last4=%s\", ssn[-4:])"
       ]
     },
     {
@@ -82,7 +94,11 @@
       ],
       "owasp": [
         "A05:2021 Security Misconfiguration"
-      ]
+      ],
+      "examples": [
+        "app.use(serveIndex(\"/public\"));"
+      ],
+      "ignore_case": true
     },
     {
       "id": "expose.debug-endpoint",
@@ -98,7 +114,7 @@
         "ruby"
       ],
       "pattern": "[\\\"'`]/(debug|_debug|admin/debug|phpinfo|env|_env|actuator|metrics|heapdump|threaddump|pprof|__debug__|console)[\\\"'`/]",
-      "nearby_absent": "(login_required|requires_auth|authenticate|authorize|@jwt|permission|admin_only|internal_only|Depends\\s*\\()",
+      "nearby_absent": "(login_required|requires?[_-]?[Aa]uth|authenticate|authorize|@jwt|permission|admin[_-]?only|internal[_-]?only|Depends\\s*\\(|ensureAuth|isAuthenticated|requireAdmin|protect\\b)",
       "nearby_window": 5,
       "description": "Diagnostic endpoints expose environment variables, heap contents, goroutine stacks or a live console. Spring Boot Actuator, Go's pprof and Werkzeug's console have all been the entry point in real incidents.",
       "remediation": "Bind them to an internal interface, or put them behind the same authorization as the admin surface.",
@@ -107,6 +123,12 @@
       ],
       "owasp": [
         "A05:2021 Security Misconfiguration"
+      ],
+      "examples": [
+        "app.get(\"/debug\", (req, res) => res.json(process.env));"
+      ],
+      "counterexamples": [
+        "app.get(\"/debug\", requiresAuth, (req, res) => res.json({}));"
       ]
     },
     {
@@ -174,6 +196,12 @@
       ],
       "owasp": [
         "A05:2021 Security Misconfiguration"
+      ],
+      "examples": [
+        "    return render(\"error.html\", trace=traceback.format_exc())"
+      ],
+      "counterexamples": [
+        "    logger.exception(\"failed\")"
       ]
     },
     {
@@ -197,7 +225,13 @@
       "cwe": [
         "CWE-778"
       ],
-      "not_pattern": "^\\s*(def|function|async def|class)\\s|=>\\s*\\{?\\s*$"
+      "not_pattern": "^\\s*(def|function|async def|class)\\s|=>\\s*\\{?\\s*$",
+      "examples": [
+        "    grant_admin(target_user)"
+      ],
+      "counterexamples": [
+        "    audit.record(\"grant_admin\", target_user)"
+      ]
     }
   ]
 }

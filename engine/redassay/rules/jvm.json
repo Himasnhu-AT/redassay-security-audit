@@ -24,6 +24,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "Runtime.getRuntime().exec(\"ping \" + host);"
+      ],
+      "counterexamples": [
+        "new ProcessBuilder(\"ping\", \"-c\", \"1\", host).start();"
       ]
     },
     {
@@ -44,6 +50,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "stmt.executeQuery(\"SELECT * FROM t WHERE id = \" + id);"
+      ],
+      "counterexamples": [
+        "ps.setString(1, id);"
       ]
     },
     {
@@ -55,7 +67,7 @@
         "java",
         "kotlin"
       ],
-      "pattern": "(SpelExpressionParser|ExpressionParser)[\\s\\S]{0,120}?parseExpression\\s*\\(\\s*(?![\\\"'])",
+      "pattern": "\\.parseExpression\\s*\\(\\s*(?![\\\"'])",
       "description": "SpEL evaluates against the application context and can reach arbitrary beans and, through them, arbitrary code.",
       "remediation": "Never parse an expression built from input. Use a fixed template with a restricted EvaluationContext if you must.",
       "cwe": [
@@ -63,7 +75,15 @@
       ],
       "owasp": [
         "A03:2021 Injection"
-      ]
+      ],
+      "examples": [
+        "SpelExpressionParser p; Expression e = p.parseExpression(userSupplied);"
+      ],
+      "counterexamples": [
+        "        Expression expression = parser.parseExpression(\"#root.name\");"
+      ],
+      "nearby": "(SpelExpressionParser|ExpressionParser|StandardEvaluationContext)",
+      "nearby_window": 6
     },
     {
       "id": "jvm.trust-all-certs",
@@ -83,6 +103,9 @@
       ],
       "owasp": [
         "A02:2021 Cryptographic Failures"
+      ],
+      "examples": [
+        "    public void checkServerTrusted(X509Certificate[] chain, String authType) {}"
       ]
     },
     {
@@ -105,6 +128,9 @@
       ],
       "owasp": [
         "A05:2021 Security Misconfiguration"
+      ],
+      "examples": [
+        "DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();"
       ]
     },
     {
@@ -125,6 +151,12 @@
       ],
       "owasp": [
         "A02:2021 Cryptographic Failures"
+      ],
+      "examples": [
+        "Cipher cipher = Cipher.getInstance(\"DES/ECB/PKCS5Padding\");"
+      ],
+      "counterexamples": [
+        "Cipher cipher = Cipher.getInstance(\"AES/GCM/NoPadding\");"
       ]
     },
     {
@@ -144,6 +176,9 @@
       ],
       "owasp": [
         "A01:2021 Broken Access Control"
+      ],
+      "examples": [
+        "http.authorizeRequests().antMatchers(\"/**\").permitAll();"
       ]
     },
     {
@@ -163,6 +198,12 @@
       ],
       "owasp": [
         "A01:2021 Broken Access Control"
+      ],
+      "examples": [
+        "http.csrf().disable();"
+      ],
+      "counterexamples": [
+        "http.csrf(Customizer.withDefaults());"
       ]
     }
   ]

@@ -32,6 +32,12 @@
       "remediation": "Use argon2id, scrypt or bcrypt with a per-password salt and a tuned work factor.",
       "cwe": [
         "CWE-916"
+      ],
+      "examples": [
+        "stored = hashlib.sha256(password.encode()).hexdigest()"
+      ],
+      "counterexamples": [
+        "stored = argon2.hash(password)"
       ]
     },
     {
@@ -55,6 +61,12 @@
       "remediation": "Use SHA-256 or better. If this is a non-security checksum, say so in a comment and suppress the rule.",
       "cwe": [
         "CWE-327"
+      ],
+      "examples": [
+        "digest = hashlib.md5(payload).hexdigest()"
+      ],
+      "counterexamples": [
+        "digest = hashlib.sha256(payload).hexdigest()"
       ]
     },
     {
@@ -78,7 +90,13 @@
       "cwe": [
         "CWE-327"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "cipher = AES.new(key, AES.MODE_ECB)"
+      ],
+      "counterexamples": [
+        "cipher = AES.new(key, AES.MODE_GCM, nonce)"
+      ]
     },
     {
       "id": "crypto.static-iv",
@@ -100,6 +118,12 @@
       "remediation": "Generate a fresh random IV per message with a CSPRNG and store it alongside the ciphertext.",
       "cwe": [
         "CWE-329"
+      ],
+      "examples": [
+        "iv = \"0123456789abcdef\""
+      ],
+      "counterexamples": [
+        "iv = os.urandom(16)"
       ]
     },
     {
@@ -125,7 +149,13 @@
       "cwe": [
         "CWE-338"
       ],
-      "not_pattern": "\\b(date|time|day|month|year|hour|minute|second|jitter|delay|backoff|sleep|shuffle|sample|color|colour|index|offset|seed_?data|fake|mock|dummy)\\b"
+      "not_pattern": "\\b(date|time|day|month|year|hour|minute|second|jitter|delay|backoff|sleep|shuffle|sample|color|colour|index|offset|seed_?data|fake|mock|dummy)\\b",
+      "examples": [
+        "reset_token = random.randint(100000, 999999)"
+      ],
+      "counterexamples": [
+        "reset_token = secrets.token_urlsafe(32)"
+      ]
     },
     {
       "id": "crypto.tls-verify-disabled",
@@ -149,7 +179,13 @@
       "cwe": [
         "CWE-295"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "response = requests.get(url, verify=False)"
+      ],
+      "counterexamples": [
+        "response = requests.get(url, verify=CA_BUNDLE)"
+      ]
     },
     {
       "id": "crypto.weak-tls-version",
@@ -176,7 +212,13 @@
       "cwe": [
         "CWE-327"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)"
+      ],
+      "counterexamples": [
+        "context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)"
+      ]
     },
     {
       "id": "crypto.des-rc4-3des",
@@ -199,7 +241,13 @@
       "cwe": [
         "CWE-327"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "cipher = Cipher(algorithms.TripleDES(key), modes.CBC(iv))"
+      ],
+      "counterexamples": [
+        "cipher = Cipher(algorithms.AES(key), modes.GCM(nonce))"
+      ]
     },
     {
       "id": "crypto.jwt-none-alg",
@@ -224,7 +272,13 @@
       "skip_in_strings": true,
       "nearby": "\\bjwt\\b|json_?web_?token|access_token|id_token|bearer",
       "nearby_window": 3,
-      "ignore_case": true
+      "ignore_case": true,
+      "examples": [
+        "claims = jwt.decode(token, options={\"verify_signature\": False})"
+      ],
+      "counterexamples": [
+        "claims = jwt.decode(token, key, algorithms=[\"RS256\"])"
+      ]
     },
     {
       "id": "crypto.constant-time-compare",
@@ -242,13 +296,20 @@
         "csharp"
       ],
       "pattern": "(==|===|!=|!==|\\.equals\\s*\\(|strcmp\\s*\\()",
-      "nearby": "\\b(hmac|signature|mac|digest|token|api_?key|secret)\\b",
+      "nearby": "\\b\\w*(hmac|signature|digest|token|api_?key|secret|checksum)\\w*\\b",
       "nearby_window": 2,
       "not_pattern": "compare_digest|timingSafeEqual|MessageDigest\\.isEqual|subtle\\.|hash_equals|len\\(|\\.length|[=!]=+\\s*[\\\"'][^\\\"']{0,3}[\\\"']|[\\\"'][^\\\"']{0,3}[\\\"']\\s*[=!]=+",
       "description": "A short-circuiting comparison leaks how many leading bytes matched, which is enough to forge a signature byte by byte over many requests.",
       "remediation": "Use hmac.compare_digest (Python), crypto.timingSafeEqual (Node), hash_equals (PHP), subtle.ConstantTimeCompare (Go).",
       "cwe": [
         "CWE-208"
+      ],
+      "examples": [
+        "    return expected_signature == provided_signature"
+      ],
+      "counterexamples": [
+        "    return hmac.compare_digest(expected_signature, provided)",
+        "    elif token == \"]\":"
       ]
     },
     {
@@ -270,6 +331,12 @@
       "remediation": "Use 3072-bit RSA, or move to Ed25519/ECDSA P-256.",
       "cwe": [
         "CWE-326"
+      ],
+      "examples": [
+        "key = rsa.generate_private_key(public_exponent=65537, key_size=1024)"
+      ],
+      "counterexamples": [
+        "key = rsa.generate_private_key(public_exponent=65537, key_size=3072)"
       ]
     },
     {
@@ -292,6 +359,12 @@
       "remediation": "Generate a random salt per record and store it with the hash.",
       "cwe": [
         "CWE-760"
+      ],
+      "examples": [
+        "salt = \"s0m3st4t1cs4lt\""
+      ],
+      "counterexamples": [
+        "salt = os.urandom(16)"
       ]
     }
   ]

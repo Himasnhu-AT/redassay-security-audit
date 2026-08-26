@@ -23,6 +23,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "require_once($_GET[\"module\"]);"
+      ],
+      "counterexamples": [
+        "require_once(MODULES[$key]);"
       ]
     },
     {
@@ -41,6 +47,9 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "$result = $conn->query(\"SELECT * FROM u WHERE id = \" . $_GET[\"id\"]);"
       ]
     },
     {
@@ -60,6 +69,12 @@
       ],
       "owasp": [
         "A07:2021 Identification and Authentication Failures"
+      ],
+      "examples": [
+        "if ($stored == sha1($input)) {"
+      ],
+      "counterexamples": [
+        "if (hash_equals($stored, sha1($input))) {"
       ]
     },
     {
@@ -78,6 +93,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "extract($_POST);"
+      ],
+      "counterexamples": [
+        "$name = $_POST[\"name\"];"
       ]
     },
     {
@@ -98,6 +119,9 @@
       ],
       "owasp": [
         "A04:2021 Insecure Design"
+      ],
+      "examples": [
+        "move_uploaded_file($tmp, $destination);"
       ]
     },
     {
@@ -117,6 +141,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "record.send(params[:action])"
+      ],
+      "counterexamples": [
+        "record.send(:save)"
       ]
     },
     {
@@ -136,6 +166,12 @@
       ],
       "owasp": [
         "A01:2021 Broken Access Control"
+      ],
+      "examples": [
+        "@post = Post.new(params[:post])"
+      ],
+      "counterexamples": [
+        "@post = Post.new(params.require(:post).permit(:title))"
       ]
     },
     {
@@ -154,6 +190,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "klass = params[:kind].constantize"
+      ],
+      "counterexamples": [
+        "klass = ALLOWED.fetch(params[:kind])"
       ]
     },
     {
@@ -172,6 +214,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "render inline: \"Hello #{params[:name]}\""
+      ],
+      "counterexamples": [
+        "render \"greeting\", locals: { name: params[:name] }"
       ]
     }
   ]

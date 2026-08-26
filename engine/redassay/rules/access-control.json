@@ -32,6 +32,9 @@
       "remediation": "Resolve the final path and assert it is still inside the base directory; strip the path component with basename first.",
       "cwe": [
         "CWE-22"
+      ],
+      "examples": [
+        "path = os.path.join(UPLOAD_DIR, request.args.get(\"name\"))"
       ]
     },
     {
@@ -53,6 +56,12 @@
       "remediation": "Validate every member path resolves inside the destination. On Python 3.12+, pass filter='data'.",
       "cwe": [
         "CWE-22"
+      ],
+      "examples": [
+        "archive.extractall(destination)"
+      ],
+      "counterexamples": [
+        "archive.extractall(destination, filter='data')"
       ]
     },
     {
@@ -71,6 +80,9 @@
       "remediation": "Apply the framework's authorization decorator, and check object ownership inside the handler, not just authentication.",
       "cwe": [
         "CWE-862"
+      ],
+      "examples": [
+        "@app.route(\"/admin/delete\", methods=[\"POST\"])"
       ]
     },
     {
@@ -87,6 +99,9 @@
       "remediation": "Insert an authentication/authorization middleware argument, and verify resource ownership inside the handler.",
       "cwe": [
         "CWE-862"
+      ],
+      "examples": [
+        "app.post(\"/transfer\", async (req, res) => {"
       ]
     },
     {
@@ -109,6 +124,12 @@
       "remediation": "Scope every lookup to the authenticated principal: Model.objects.get(id=x, owner=request.user).",
       "cwe": [
         "CWE-639"
+      ],
+      "examples": [
+        "const order = await Order.findById(req.params.id);"
+      ],
+      "counterexamples": [
+        "const order = await Order.findById(req.params.id, { user_id: session.userId });"
       ]
     },
     {
@@ -132,6 +153,9 @@
       "remediation": "Reflect only origins from an explicit allowlist when credentials are involved.",
       "cwe": [
         "CWE-942"
+      ],
+      "examples": [
+        "app.use(cors({ origin: \"*\", credentials: true }));"
       ]
     },
     {
@@ -151,6 +175,9 @@
       "remediation": "Compare the Origin against an allowlist and echo it only on a match.",
       "cwe": [
         "CWE-942"
+      ],
+      "examples": [
+        "res.setHeader(\"Access-Control-Allow-Origin\", req.headers.origin);"
       ]
     },
     {
@@ -166,6 +193,12 @@
       "remediation": "Use an explicit if/raise.",
       "cwe": [
         "CWE-617"
+      ],
+      "examples": [
+        "    assert current_user.is_admin, \"denied\""
+      ],
+      "counterexamples": [
+        "    assert len(rows) == 3"
       ]
     }
   ]

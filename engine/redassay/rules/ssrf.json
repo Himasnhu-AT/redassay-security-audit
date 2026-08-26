@@ -32,7 +32,10 @@
       "nearby_window": 4,
       "description": "A request-controlled URL lets an attacker aim the server at internal services: cloud metadata endpoints, admin interfaces on localhost, or the internal network generally.",
       "remediation": "Allowlist the hosts you intend to reach, resolve the hostname and reject private/link-local addresses, and disable redirects.",
-      "not_pattern": "^\\s*(def|async def|function|export function|class)\\s|=>\\s*\\{?\\s*$|allow_redirects\\s*=\\s*False"
+      "not_pattern": "^\\s*(def|async def|function|export function|class)\\s|=>\\s*\\{?\\s*$|allow_redirects\\s*=\\s*False",
+      "examples": [
+        "    return requests.get(request.args[\"url\"], timeout=5).text"
+      ]
     },
     {
       "id": "ssrf.metadata-endpoint",
@@ -44,7 +47,10 @@
       ],
       "pattern": "169\\.254\\.169\\.254|metadata\\.google\\.internal|metadata\\.azure\\.com|100\\.100\\.100\\.200",
       "description": "The link-local metadata service hands out instance credentials to anything that can reach it. Its presence in source is worth a look, and it is the first place an SSRF gets pointed.",
-      "remediation": "Require IMDSv2 (token-bound), and block outbound access to 169.254.0.0/16 from application containers."
+      "remediation": "Require IMDSv2 (token-bound), and block outbound access to 169.254.0.0/16 from application containers.",
+      "examples": [
+        "METADATA = \"http://169.254.169.254/latest/meta-data/\""
+      ]
     },
     {
       "id": "ssrf.redirect-follow-unbounded",
@@ -62,7 +68,10 @@
       "nearby": "req\\.|request\\.|\\$_(GET|POST)|user_url|target",
       "nearby_window": 5,
       "description": "An allowlist check on the first URL is worthless if the client then follows a 302 to an internal address.",
-      "remediation": "Disable automatic redirects and re-validate each hop."
+      "remediation": "Disable automatic redirects and re-validate each hop.",
+      "examples": [
+        "    return requests.get(request.args[\"url\"], allow_redirects=True)"
+      ]
     },
     {
       "id": "ssrf.open-redirect",
@@ -87,6 +96,12 @@
       ],
       "owasp": [
         "A01:2021 Broken Access Control"
+      ],
+      "examples": [
+        "    return redirect(request.args.get(\"next\"))"
+      ],
+      "counterexamples": [
+        "    return redirect(url_for(\"index\"))"
       ]
     }
   ]

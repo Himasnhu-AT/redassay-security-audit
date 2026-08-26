@@ -26,7 +26,7 @@
         "kotlin",
         "scala"
       ],
-      "pattern": "\\b(select|insert\\s+into|update|delete\\s+from)\\b[^;\"'`]*?[\"'`]\\s*(\\+|\\.|%|\\|\\|)\\s*",
+      "pattern": "\\b(select|insert\\s+into|update|delete\\s+from)\\b[^\\n]*?[\\\"'`]\\s*(\\+|\\.|%|\\|\\|)\\s*[\\w(]",
       "not_pattern": "(\\?|:\\w+|\\$\\d|%s|%\\(|@\\w+)\\s*[\"'`]\\s*$",
       "description": "A SQL statement is assembled by concatenating a string literal with another expression. If any part of that expression reaches the request, an attacker controls the query's structure, not just its data.",
       "remediation": "Use parameterized queries (placeholders bound by the driver). Never interpolate into SQL, including for identifiers - allowlist those instead.",
@@ -36,7 +36,15 @@
       "references": [
         "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"
       ],
-      "ignore_case": true
+      "ignore_case": true,
+      "examples": [
+        "query = \"SELECT id FROM users WHERE name = '\" + name",
+        "sql = \"DELETE FROM sessions WHERE token = \" + token"
+      ],
+      "counterexamples": [
+        "cursor.execute(\"SELECT id FROM users WHERE name = %s\", (name,))",
+        "const rows = await db.query(\"SELECT * FROM t WHERE id = ?\", [id]);"
+      ]
     },
     {
       "id": "sql.fstring-query",
@@ -52,7 +60,13 @@
       "cwe": [
         "CWE-89"
       ],
-      "ignore_case": true
+      "ignore_case": true,
+      "examples": [
+        "cursor.execute(f\"SELECT * FROM users WHERE id = {user_id}\")"
+      ],
+      "counterexamples": [
+        "cursor.execute(\"SELECT * FROM users WHERE id = %s\", (user_id,))"
+      ]
     },
     {
       "id": "sql.django-raw-interpolation",
@@ -62,13 +76,19 @@
       "languages": [
         "python"
       ],
-      "pattern": "\\.(raw|extra)\\s*\\(\\s*(f[\"']|[\"'][^\"']*[\"']\\s*(%|\\+|\\.format))",
+      "pattern": "\\.(raw|extra)\\s*\\(\\s*(f[\\\"']|(\\\"[^\\\"]*\\\"|'[^']*'|`[^`]*`)\\s*(%|\\+|\\.format))",
       "description": "Django's raw() and extra() do not escape interpolated values; only the params= argument is bound safely.",
       "remediation": "Use Model.objects.raw('... WHERE id = %s', [value]) and pass values through params.",
       "cwe": [
         "CWE-89"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "rows = Model.objects.raw(f\"SELECT * FROM t WHERE n = {name}\")"
+      ],
+      "counterexamples": [
+        "rows = Model.objects.raw(\"SELECT * FROM t WHERE n = %s\", [name])"
+      ]
     },
     {
       "id": "sql.knex-sequelize-raw",
@@ -85,6 +105,12 @@
       "remediation": "Use bindings: knex.raw('select * from t where id = ?', [id]) or sequelize replacements.",
       "cwe": [
         "CWE-89"
+      ],
+      "examples": [
+        "const rows = await knex.raw(`select * from t where id = ${id}`);"
+      ],
+      "counterexamples": [
+        "const rows = await knex.raw(\"select * from t where id = ?\", [id]);"
       ]
     },
     {
@@ -103,7 +129,13 @@
       "cwe": [
         "CWE-78"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "subprocess.check_call(command, shell=True)"
+      ],
+      "counterexamples": [
+        "subprocess.check_call([\"ls\", \"-la\"])"
+      ]
     },
     {
       "id": "cmd.os-system",
@@ -120,7 +152,13 @@
       "cwe": [
         "CWE-78"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "os.system(\"rm -rf \" + target)"
+      ],
+      "counterexamples": [
+        "os.system(\"uptime\")"
+      ]
     },
     {
       "id": "cmd.node-exec",
@@ -131,13 +169,19 @@
         "javascript",
         "typescript"
       ],
-      "pattern": "\\b(child_process\\.)?(exec|execSync)\\s*\\(\\s*(`[^`]*\\$\\{|[\"'][^\"']*[\"']\\s*\\+|\\w+\\s*\\+)",
+      "pattern": "\\b(child_process\\.)?(exec|execSync)\\s*\\(\\s*(`[^`]*\\$\\{|(\\\"[^\\\"]*\\\"|'[^']*'|`[^`]*`)\\s*\\+|\\w+\\s*\\+)",
       "description": "exec() spawns a shell. Template interpolation into it is command injection.",
       "remediation": "Use execFile()/spawn() with an argument array, which never involves a shell.",
       "cwe": [
         "CWE-78"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "exec(\"git checkout \" + branch, done);"
+      ],
+      "counterexamples": [
+        "execFile(\"git\", [\"checkout\", branch], done);"
+      ]
     },
     {
       "id": "cmd.ruby-backtick",
@@ -152,6 +196,12 @@
       "remediation": "Use the multi-argument form: system('git', 'checkout', branch).",
       "cwe": [
         "CWE-78"
+      ],
+      "examples": [
+        "output = `ping -c 1 #{host}`"
+      ],
+      "counterexamples": [
+        "output = `uptime`"
       ]
     },
     {
@@ -168,7 +218,13 @@
       "cwe": [
         "CWE-78"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "shell_exec(\"ping \" . $_GET[\"host\"]);"
+      ],
+      "counterexamples": [
+        "shell_exec(\"uptime\");"
+      ]
     },
     {
       "id": "code.python-eval-exec",
@@ -185,7 +241,13 @@
       "cwe": [
         "CWE-95"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "value = eval(expression)"
+      ],
+      "counterexamples": [
+        "value = ast.literal_eval(expression)"
+      ]
     },
     {
       "id": "code.js-eval",
@@ -206,7 +268,13 @@
       "cwe": [
         "CWE-95"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "const result = eval(payload);"
+      ],
+      "counterexamples": [
+        "const result = JSON.parse(payload);"
+      ]
     },
     {
       "id": "code.node-vm",
@@ -226,7 +294,10 @@
       "references": [
         "https://nodejs.org/api/vm.html#vm-executing-javascript"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "vm.runInNewContext(userScript, sandbox);"
+      ]
     },
     {
       "id": "code.php-eval-include",
@@ -243,7 +314,13 @@
         "CWE-95",
         "CWE-98"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "eval($_POST[\"code\"]);"
+      ],
+      "counterexamples": [
+        "echo htmlspecialchars($_POST[\"name\"]);"
+      ]
     },
     {
       "id": "inject.ssti-render-string",
@@ -258,6 +335,12 @@
       "remediation": "Render a fixed template file and pass user data as a context variable.",
       "cwe": [
         "CWE-1336"
+      ],
+      "examples": [
+        "return render_template_string(f\"<h1>{title}</h1>\")"
+      ],
+      "counterexamples": [
+        "return render_template(\"page.html\", title=title)"
       ]
     },
     {
@@ -276,7 +359,13 @@
       "cwe": [
         "CWE-943"
       ],
-      "skip_in_strings": true
+      "skip_in_strings": true,
+      "examples": [
+        "const docs = await col.find({ $where: \"this.a == 1\" });"
+      ],
+      "counterexamples": [
+        "const docs = await col.find({ a: 1 });"
+      ]
     },
     {
       "id": "inject.nosql-operator-injection",
@@ -292,6 +381,12 @@
       "remediation": "Cast and validate each field before it reaches the query: String(req.body.user).",
       "cwe": [
         "CWE-943"
+      ],
+      "examples": [
+        "const user = await User.findOne(req.body);"
+      ],
+      "counterexamples": [
+        "const user = await User.findOne({ email: String(req.body.email) });"
       ]
     },
     {
@@ -307,11 +402,19 @@
         "csharp",
         "php"
       ],
-      "pattern": "[\"'`]\\s*\\(\\s*[&|]?\\s*\\(?\\s*(uid|cn|sAMAccountName|mail|objectClass)\\s*=[^\"'`]*[\"'`]\\s*(\\+|%|\\.format|\\$\\{)",
+      "pattern": "\\(\\s*[&|]?\\s*\\(?\\s*(uid|cn|sAMAccountName|mail|objectClass|memberOf)\\s*=[^\\n]*?[\\\"'`]\\s*(\\+|%|\\.format|\\$\\{)",
       "description": "Unescaped input in an LDAP filter lets an attacker rewrite the filter, typically to *)(uid=* for an authentication bypass.",
       "remediation": "Escape with the platform's LDAP filter encoder before interpolating.",
       "cwe": [
         "CWE-90"
+      ],
+      "examples": [
+        "filter = \"(uid=\" + username + \")\"",
+        "String filter = \"(&(objectClass=user)(sAMAccountName=\" + name + \"))\";"
+      ],
+      "counterexamples": [
+        "filter = ldap_filter.escape_filter_chars(username)",
+        "  execFile(\"dig\", [\"+short\", domain], done);"
       ]
     },
     {
@@ -327,11 +430,17 @@
         "csharp",
         "php"
       ],
-      "pattern": "(xpath|selectNodes|selectSingleNode|evaluate)\\s*\\(\\s*[\"'`][^\"'`]*[\"'`]\\s*(\\+|%|\\.format|\\$\\{)",
+      "pattern": "(xpath|selectNodes|selectSingleNode|evaluate)\\s*\\(\\s*(\\\"[^\\\"]*\\\"|'[^']*'|`[^`]*`)\\s*(\\+|%|\\.format|\\$\\{)",
       "description": "Concatenated XPath allows the same class of logic rewriting as SQL injection.",
       "remediation": "Use variable binding via XPathVariableResolver or an equivalent.",
       "cwe": [
         "CWE-643"
+      ],
+      "examples": [
+        "node = tree.xpath(\"//user[name='\" + name + \"']\")"
+      ],
+      "counterexamples": [
+        "node = tree.xpath(\"//user[@id=$uid]\", uid=name)"
       ]
     },
     {
@@ -345,7 +454,7 @@
         "javascript",
         "typescript"
       ],
-      "pattern": "(log(ger)?\\.(info|debug|warn|warning|error))\\s*\\(\\s*(f[\"']|[\"'`][^\"'`]*[\"'`]\\s*(\\+|%|\\.format|\\$\\{))",
+      "pattern": "(log(ger)?\\.(info|debug|warn|warning|error))\\s*\\(\\s*(f[\\\"']|(\\\"[^\\\"]*\\\"|'[^']*'|`[^`]*`)\\s*(\\+|%|\\.format|\\$\\{))",
       "nearby": "req\\.|request\\.|params|user_input|argv",
       "nearby_window": 5,
       "description": "Newlines in user input let an attacker inject fake log entries, which breaks log-based investigation.",
@@ -356,6 +465,9 @@
       "tags": [
         "injection",
         "logging"
+      ],
+      "examples": [
+        "    logger.info(f\"user {request.args['name']} logged in\")"
       ]
     }
   ]

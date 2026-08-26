@@ -22,6 +22,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "rows, err := db.Query(fmt.Sprintf(\"SELECT * FROM t WHERE id = %s\", id))"
+      ],
+      "counterexamples": [
+        "rows, err := db.Query(\"SELECT * FROM t WHERE id = $1\", id)"
       ]
     },
     {
@@ -37,6 +43,12 @@
       ],
       "owasp": [
         "A03:2021 Injection"
+      ],
+      "examples": [
+        "cmd := exec.Command(\"sh\", \"-c\", script)"
+      ],
+      "counterexamples": [
+        "cmd := exec.Command(\"git\", \"status\")"
       ]
     },
     {
@@ -52,6 +64,12 @@
       ],
       "owasp": [
         "A02:2021 Cryptographic Failures"
+      ],
+      "examples": [
+        "tlsConfig := &tls.Config{InsecureSkipVerify: true}"
+      ],
+      "counterexamples": [
+        "tlsConfig := &tls.Config{RootCAs: pool}"
       ]
     },
     {
@@ -70,6 +88,12 @@
       ],
       "owasp": [
         "A02:2021 Cryptographic Failures"
+      ],
+      "examples": [
+        "sessionToken := rand.Int63()"
+      ],
+      "counterexamples": [
+        "sessionToken := mustCryptoRand()"
       ]
     },
     {
@@ -85,6 +109,12 @@
       ],
       "owasp": [
         "A04:2021 Insecure Design"
+      ],
+      "examples": [
+        "_ = VerifySignature(body, sig)"
+      ],
+      "counterexamples": [
+        "err := VerifySignature(body, sig)"
       ]
     },
     {
@@ -103,6 +133,9 @@
       ],
       "owasp": [
         "A01:2021 Broken Access Control"
+      ],
+      "examples": [
+        "data, err := os.ReadFile(filepath.Join(base, r.URL.Query().Get(\"f\")))"
       ]
     },
     {
@@ -119,6 +152,12 @@
       ],
       "owasp": [
         "A05:2021 Security Misconfiguration"
+      ],
+      "examples": [
+        "router := gin.Default()"
+      ],
+      "counterexamples": [
+        "gin.SetMode(gin.ReleaseMode)"
       ]
     }
   ]
