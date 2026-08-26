@@ -386,6 +386,39 @@ class Store:
         scans = self.load().get("scans") or []
         return scans[-1] if scans else None
 
+    def scans(self) -> List[Dict[str, Any]]:
+        return list(self.load().get("scans") or [])
+
+    def prune(self, older_than_days: int = 90, statuses: Optional[Iterable[str]] = None) -> List[str]:
+        """Drop settled findings that have been settled for a while.
+
+        A store that only grows becomes a store nobody reads. Verified fixes and
+        old dismissals are history, not work - but the pruning is deliberate and
+        explicit, because a dismissal someone spent time on is expensive to lose
+        and cheap to keep.
+        """
+        import datetime as dt
+
+        wanted = set(statuses) if statuses else {models.VERIFIED}
+        cutoff = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=older_than_days)
+        findings = self.load()["findings"]
+        removed: List[str] = []
+        for key, raw in list(findings.items()):
+            stored = Finding.from_dict(raw)
+            if stored.status not in wanted:
+                continue
+            stamp = stored.fix.applied_at or stored.last_seen
+            try:
+                when = dt.datetime.fromisoformat(stamp)
+            except (TypeError, ValueError):
+                continue
+            if when.tzinfo is None:
+                when = when.replace(tzinfo=dt.timezone.utc)
+            if when < cutoff:
+                findings.pop(key)
+                removed.append(key)
+        return removed
+
     def destroy(self) -> None:
         if os.path.isdir(self.dir):
             shutil.rmtree(self.dir)
