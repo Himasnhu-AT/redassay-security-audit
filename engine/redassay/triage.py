@@ -196,7 +196,16 @@ def _wins(candidate: Finding, incumbent: Finding) -> bool:
     candidate_priority, incumbent_priority = priority(candidate), priority(incumbent)
     if candidate_priority != incumbent_priority:
         return candidate_priority > incumbent_priority
-    return SCANNER_PRECEDENCE.get(candidate.source, 0) > SCANNER_PRECEDENCE.get(incumbent.source, 0)
+
+    candidate_rank = SCANNER_PRECEDENCE.get(candidate.source, 0)
+    incumbent_rank = SCANNER_PRECEDENCE.get(incumbent.source, 0)
+    if candidate_rank != incumbent_rank:
+        return candidate_rank > incumbent_rank
+
+    # Two pattern rules of equal weight describing one line. Which survives must
+    # not depend on the order the scanners happened to yield them in, or the
+    # output changes between runs for no reason.
+    return candidate.rule_id < incumbent.rule_id
 
 
 def filter_severity(findings: Iterable[Finding], floor: Optional[str]) -> List[Finding]:

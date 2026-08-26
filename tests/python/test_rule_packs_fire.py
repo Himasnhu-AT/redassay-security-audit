@@ -82,7 +82,16 @@ class PolyglotCoverageTest(unittest.TestCase):
         cls.found = detected("vuln-polyglot")
 
     def _assert_pack(self, prefix: str, expected):
-        missing = [rule for rule in expected if rule not in self.found]
+        """Match on concept: triage may keep an equivalent rule that describes
+        the same defect, and which one wins is a triage decision, not a
+        detection failure."""
+        from redassay.triage import EQUIVALENT
+
+        concepts = {EQUIVALENT.get(rule_id, rule_id) for rule_id in self.found}
+        missing = [
+            rule for rule in expected
+            if rule not in self.found and EQUIVALENT.get(rule, rule) not in concepts
+        ]
         self.assertEqual(missing, [], f"{prefix} pack stopped detecting: {missing}")
 
     def test_jvm_pack(self):
