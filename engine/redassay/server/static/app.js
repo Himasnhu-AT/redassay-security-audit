@@ -3,8 +3,8 @@
 
 import { escapeHtml, relativeTime, severitySummary } from "./lib/format.js";
 import {
-  classification, codeBlock, commentList, facetChip, findingRow, headerCounts,
-  hotspotRow, severityChip,
+  classification, codeBlock, commentList, facetChip, findingRow, fixRecord,
+  headerCounts, hotspotRow, severityChip,
 } from "./lib/render.js";
 import {
   applyFilters, countBySeverity, countBySource, countByStatus, toggle, DEFAULT_FILTERS,
@@ -218,6 +218,8 @@ function renderDetail(finding) {
 
     <h3>${escapeHtml(loc.path || "")}${loc.line ? ":" + loc.line : ""}</h3>
     ${codeBlock(finding.context, loc.line)}
+
+    ${fixRecord(finding)}
 
     ${finding.remediation ? `<h3>How to fix</h3><div class="remediation">${escapeHtml(finding.remediation)}</div>` : ""}
 

@@ -63,6 +63,30 @@ export function commentList(comments) {
   return `<ul class="comments">${items.join("")}</ul>`;
 }
 
+/** What was done about a finding, once something was.
+ *
+ *  A verified finding with no visible record of the change is indistinguishable
+ *  from one somebody quietly marked done, which is the failure mode this whole
+ *  tool exists to avoid. */
+export function fixRecord(finding) {
+  const fix = finding.fix || {};
+  if (!fix.summary && !fix.diff) return "";
+  const files = (fix.files_touched || [])
+    .map((path) => `<span class="tag">${escapeHtml(path)}</span>`)
+    .join("");
+  const when = relativeTime(fix.applied_at);
+  const who = fix.applied_by || "unknown";
+  return (
+    `<h3>What was done</h3>` +
+    `<div class="fix-record">` +
+    `<div class="who">${escapeHtml(who)}${when ? " · " + escapeHtml(when) : ""}</div>` +
+    (fix.summary ? `<p>${escapeHtml(fix.summary)}</p>` : "") +
+    (files ? `<div class="tags">${files}</div>` : "") +
+    (fix.diff ? `<pre class="diff">${escapeHtml(fix.diff)}</pre>` : "") +
+    `</div>`
+  );
+}
+
 export function classification(finding) {
   const tags = [...(finding.cwe || []), ...(finding.owasp || []), ...(finding.tags || [])];
   const references = finding.references || [];
