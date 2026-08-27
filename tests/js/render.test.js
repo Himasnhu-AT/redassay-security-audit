@@ -11,6 +11,7 @@ import {
   severityChip,
   hotspotRow,
   facetChip,
+  fixRecord,
 } from "../../engine/redassay/server/static/lib/render.js";
 
 const XSS = '<img src=x onerror=alert(1)>';
@@ -159,4 +160,48 @@ test("facetChip escapes facet, value and label", () => {
 test("facetChip omits the count when null", () => {
   assert.ok(!facetChip("sort", "risk", null, true).includes('class="n"'));
   assert.ok(facetChip("sort", "risk", null, true).includes("on"));
+});
+
+test("fixRecord is empty until something was done", () => {
+  assert.equal(fixRecord(finding()), "");
+  assert.equal(fixRecord(finding({ fix: { summary: "", diff: "" } })), "");
+});
+
+test("fixRecord shows who, when, what and which files", () => {
+  const html = fixRecord(
+    finding({
+      fix: {
+        summary: "Bound the name as a query parameter",
+        applied_by: "claude",
+        applied_at: "2026-09-01T10:00:00Z",
+        files_touched: ["app/views.py"],
+        diff: "",
+      },
+    })
+  );
+  assert.ok(html.includes("Bound the name as a query parameter"));
+  assert.ok(html.includes("claude"));
+  assert.ok(html.includes("app/views.py"));
+  assert.ok(html.includes("What was done"));
+});
+
+test("fixRecord escapes every field, including the diff", () => {
+  const html = fixRecord(
+    finding({
+      fix: {
+        summary: XSS,
+        applied_by: XSS,
+        files_touched: [XSS],
+        diff: `- ${XSS}`,
+        applied_at: "2026-09-01T10:00:00Z",
+      },
+    })
+  );
+  assert.ok(!html.includes("<img"));
+});
+
+test("fixRecord renders a diff when one was recorded", () => {
+  const html = fixRecord(finding({ fix: { summary: "x", diff: "-old\n+new" } }));
+  assert.ok(html.includes('class="diff"'));
+  assert.ok(html.includes("+new"));
 });
