@@ -201,9 +201,12 @@ The interactive loop. Repeat until the user says stop:
 ### `status`
 ```bash
 $REDASSAY stats
+$REDASSAY history --limit 5
 $REDASSAY queue list
 ```
-Report counts, hotspots and anything pending.
+Report counts, hotspots, the trend since the last few scans, and anything
+pending. The trend is the part worth leading with - a total that went up after a
+fix run is the most important thing on the screen.
 
 ### `report`
 ```bash
