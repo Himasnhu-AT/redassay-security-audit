@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -284,9 +285,15 @@ def cmd_resolve(args: argparse.Namespace) -> int:
     if store is None:
         return EXIT_ERROR
     diff = args.diff or ""
-    if args.diff_file:
+    if args.diff_file == "-":
+        # `git diff -- app/views.py | redassay resolve <id> --diff-file -`
+        # is the shortest honest way for an agent to record what it changed.
+        diff = sys.stdin.read()
+    elif args.diff_file:
         with open(args.diff_file, "r", encoding="utf-8") as handle:
             diff = handle.read()
+    if args.auto_files and diff and not args.file:
+        args.file = _files_from_diff(diff)
     fix = Fix(
         summary=args.summary,
         diff=diff,
@@ -754,6 +761,19 @@ def cmd_suppress(args: argparse.Namespace) -> int:
 
 
 # --- helpers -----------------------------------------------------------------
+_DIFF_TARGET = re.compile(r"^\+\+\+ (?:b/)?(.+)$", re.MULTILINE)
+
+
+def _files_from_diff(diff: str) -> List[str]:
+    """Pull the touched paths out of a unified diff so `--file` is optional."""
+    files = []
+    for match in _DIFF_TARGET.finditer(diff):
+        path = match.group(1).strip()
+        if path and path != "/dev/null" and path not in files:
+            files.append(path)
+    return files
+
+
 def _require_store(root: str, create: bool = False) -> Optional[Store]:
     store = Store(root)
     if not store.exists and not create:
@@ -865,7 +885,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("id")
     p.add_argument("--summary", required=True)
     p.add_argument("--diff", default=None)
-    p.add_argument("--diff-file", default=None)
+    p.add_argument("--diff-file", default=None, metavar="PATH",
+                   help="read the diff from a file, or - for stdin")
+    p.add_argument("--auto-files", action="store_true", default=True,
+                   help="derive --file from the diff when not given")
     p.add_argument("--file", action="append", help="file touched by the fix (repeatable)")
     p.add_argument("--author", default="claude")
     p.set_defaults(func=cmd_resolve)
