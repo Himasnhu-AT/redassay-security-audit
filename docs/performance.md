@@ -41,7 +41,7 @@ It covers 96% of the rule packs and measures **2.3-3x** on the pattern scanner,
 with output verified byte-identical on Django, PyGoat, NodeGoat and all four
 fixtures.
 
-## Two optimizations that did not work
+## Three optimizations that did not work
 
 Recorded because they look obviously correct and are not.
 
@@ -57,9 +57,21 @@ per line. Measured **0.62x** - slower. Each gate is itself a regex, and the
 candidate list allocates once per line across 800,000 lines. The gate cost more
 than the work it skipped.
 
-The difference between the win and the losses is granularity. The prefilter runs
-once per *file* and eliminates a rule entirely. The gates ran once per *line*
-and only reordered work.
+**A trigger gate in front of `ast.parse()`.** Skip parsing a Python file that
+contains none of the substrings any AST rule needs. It skipped **50.6%** of
+Django's 2,932 Python files and measured **1.00x** - exactly no change. The parse
+cost is concentrated in the large files, and a large Python file always contains
+`open`, `assert` or `except`. The substring scan cost about what the skipped
+parses saved.
+
+It also had to be kept in sync with the rule set by hand, where a missing entry
+would silently disable a rule. A maintenance hazard for a measured zero is an
+easy call, so it went.
+
+The difference between the wins and the losses is granularity. The prefilter runs once per
+*file* and eliminates a *rule* - the unit of work it removes is much larger than
+the test that removes it. The gates that failed either ran once per line, or
+removed a unit of work that was already cheap.
 
 ## If you need it faster
 
