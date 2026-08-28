@@ -588,6 +588,13 @@ RULES: Dict[str, Dict[str, Any]] = {
 }
 
 
+# A substring "trigger" gate in front of ast.parse() was measured here and
+# removed: it skipped 50% of Django's Python files and saved no measurable
+# time, because the parse cost is concentrated in the large files, and those
+# all contain something on the trigger list. It also had to be kept in sync
+# with the rule set - a missing entry would have silently disabled a rule.
+# See docs/performance.md.
+
 @register
 class PythonAstScanner(Scanner):
     name = "python-ast"
