@@ -660,3 +660,15 @@ class ResolveDiffTest(CliTestCase):
         from redassay.cli import _files_from_diff
         diff = "--- a/gone.py\n+++ /dev/null\n--- a/kept.py\n+++ b/kept.py\n"
         self.assertEqual(_files_from_diff(diff), ["kept.py"])
+
+    def test_plain_diff_u_timestamps_are_not_part_of_the_filename(self):
+        """`diff -u` writes `+++ path<TAB>2026-09-14 14:20:28`; git does not."""
+        from redassay.cli import _files_from_diff
+        diff = "--- app/views.py.orig\t2026-09-14 14:20:27\n+++ app/views.py\t2026-09-14 14:20:28\n"
+        self.assertEqual(_files_from_diff(diff), ["app/views.py"])
+
+    def test_git_style_and_plain_style_agree(self):
+        from redassay.cli import _files_from_diff
+        git_style = "+++ b/app/views.py\n"
+        plain = "+++ app/views.py\t2026-09-14 14:20:28\n"
+        self.assertEqual(_files_from_diff(git_style), _files_from_diff(plain))
