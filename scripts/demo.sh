@@ -61,10 +61,17 @@ open(path, "w").write(source)
 print("  patched app/views.py")
 PY
 
-$CLI resolve "$sql"   --summary "Bound the name as a query parameter instead of interpolating it" --file app/views.py
-$CLI resolve "$shell" --summary "Passed an argument list with a timeout so no shell parses the host" --file app/views.py
+# Record what changed, not just that something did. Without a diff, a finding
+# marked fixed is hard to tell from one somebody quietly marked done.
+diff -u app/views.py.orig app/views.py > "$WORK/change.diff" 2>/dev/null || true
+$CLI resolve "$sql"   --summary "Bound the name as a query parameter instead of interpolating it" \
+  --diff-file "$WORK/change.diff"
+$CLI resolve "$shell" --summary "Passed an argument list with a timeout so no shell parses the host" \
+  --diff-file "$WORK/change.diff"
 $CLI queue complete 1 --result fixed
 $CLI queue complete 2 --result fixed
+
+rm -f app/views.py.orig
 
 say "5. Rescan verifies"
 $CLI scan --quiet --limit 0 --no-color 2>&1 | grep -E "^(store|[0-9]+ findings)" || true
