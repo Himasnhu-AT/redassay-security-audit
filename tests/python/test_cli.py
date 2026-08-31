@@ -606,3 +606,57 @@ class PruneTest(CliTestCase):
         before = len(Store.open(self.root))
         self.run_cli("prune", "--older-than", "0")
         self.assertEqual(len(Store.open(self.root)), before)
+
+
+class ResolveDiffTest(CliTestCase):
+    DIFF = """--- a/app.py
++++ b/app.py
+@@ -1,3 +1,3 @@
+-os.system("ping " + host)
++subprocess.run(["ping", host])
+--- a/util.py
++++ b/util.py
+@@ -1 +1 @@
+-x = 1
++x = 2
+"""
+
+    def test_diff_from_stdin(self):
+        import sys
+        finding_id = self.seed()
+        original = sys.stdin
+        sys.stdin = io.StringIO(self.DIFF)
+        try:
+            code, _, err = self.run_cli("resolve", finding_id, "--summary", "fixed", "--diff-file", "-")
+        finally:
+            sys.stdin = original
+        self.assertEqual(code, 0, err)
+        self.assertIn("subprocess.run", Store.open(self.root).get(finding_id).fix.diff)
+
+    def test_files_are_derived_from_the_diff(self):
+        import sys
+        finding_id = self.seed()
+        original = sys.stdin
+        sys.stdin = io.StringIO(self.DIFF)
+        try:
+            self.run_cli("resolve", finding_id, "--summary", "fixed", "--diff-file", "-")
+        finally:
+            sys.stdin = original
+        self.assertEqual(Store.open(self.root).get(finding_id).fix.files_touched, ["app.py", "util.py"])
+
+    def test_explicit_files_win_over_the_diff(self):
+        import sys
+        finding_id = self.seed()
+        original = sys.stdin
+        sys.stdin = io.StringIO(self.DIFF)
+        try:
+            self.run_cli("resolve", finding_id, "--summary", "fixed",
+                         "--diff-file", "-", "--file", "only.py")
+        finally:
+            sys.stdin = original
+        self.assertEqual(Store.open(self.root).get(finding_id).fix.files_touched, ["only.py"])
+
+    def test_dev_null_targets_are_ignored(self):
+        from redassay.cli import _files_from_diff
+        diff = "--- a/gone.py\n+++ /dev/null\n--- a/kept.py\n+++ b/kept.py\n"
+        self.assertEqual(_files_from_diff(diff), ["kept.py"])
