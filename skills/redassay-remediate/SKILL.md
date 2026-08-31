@@ -74,10 +74,16 @@ adjust the test to match the new behaviour without saying so explicitly.
 ## Recording it
 
 ```bash
-python3 "$CLAUDE_PLUGIN_ROOT/engine/redassay_cli.py" resolve <finding-id> \
+git diff -- app/net.py | python3 "$CLAUDE_PLUGIN_ROOT/engine/redassay_cli.py" \
+  resolve <finding-id> \
   --summary "Replaced the shell string with an argument list" \
-  --file app/net.py
+  --diff-file -
 ```
+
+Piping the diff in is worth the extra pipe: the board shows the reviewer exactly
+what changed, and the touched files are read out of the diff so `--file` is not
+needed. A finding marked fixed with no visible record of the change is hard to
+tell apart from one somebody quietly marked done.
 
 The summary is read by someone who was not watching. One sentence, what changed
 and why, no restating the vulnerability.

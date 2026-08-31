@@ -141,6 +141,11 @@ Record that a fix was applied. This is how an agent closes the loop.
 redassay resolve a584 \
   --summary "Bound the host as a subprocess argument" \
   --file app/net.py
+
+# Or pipe the actual change in - the touched files are read out of the diff,
+# so --file becomes optional and the board shows what was done.
+git diff -- app/net.py | redassay resolve a584 \
+  --summary "Bound the host as a subprocess argument" --diff-file -
 ```
 
 The next scan that no longer reproduces the finding moves it to `verified`. One

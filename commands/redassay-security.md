@@ -161,11 +161,14 @@ follow the `redassay-remediate` skill. The short version:
 5. Record it:
 
 ```bash
-$REDASSAY resolve <finding-id> \
+git diff -- app/net.py | $REDASSAY resolve <finding-id> \
   --summary "Bound the host as a subprocess argument instead of a shell string" \
-  --file app/net.py
+  --diff-file -
 $REDASSAY queue complete <seq> --result "fixed"
 ```
+
+Pipe the diff in rather than passing `--file`: the board then shows the reviewer
+exactly what changed, and the touched files are read out of the diff.
 
 If a finding cannot be fixed safely — the correct fix needs a design decision,
 or the code is a false positive you can now prove — say so and mark it:
