@@ -761,16 +761,19 @@ def cmd_suppress(args: argparse.Namespace) -> int:
 
 
 # --- helpers -----------------------------------------------------------------
-_DIFF_TARGET = re.compile(r"^\+\+\+ (?:b/)?(.+)$", re.MULTILINE)
+# `git diff` writes `+++ b/path`; plain `diff -u` writes `+++ path\t<timestamp>`.
+# Both have to parse, and the timestamp is not part of the filename.
+_DIFF_TARGET = re.compile(r"^\+\+\+ (?:b/)?([^\t\n]+)", re.MULTILINE)
 
 
 def _files_from_diff(diff: str) -> List[str]:
     """Pull the touched paths out of a unified diff so `--file` is optional."""
-    files = []
+    files: List[str] = []
     for match in _DIFF_TARGET.finditer(diff):
         path = match.group(1).strip()
-        if path and path != "/dev/null" and path not in files:
-            files.append(path)
+        if not path or path == "/dev/null" or path in files:
+            continue
+        files.append(path)
     return files
 
 
