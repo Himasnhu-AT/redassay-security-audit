@@ -12,6 +12,21 @@ Exit codes: `0` success, `1` a gate tripped (`--fail-on`), `2` an error.
 
 ---
 
+## Getting started
+
+### `init`
+
+```bash
+redassay init
+```
+
+Creates `.redassay/`, writes a config, adds the store to `.gitignore`, and
+scaffolds a commented `.redassayignore`. Not required - `scan` creates what it
+needs - but running it first gives you the ignore template, which is the thing
+most repositories want before their first scan.
+
+---
+
 ## Scanning
 
 ### `scan`
@@ -92,6 +107,30 @@ fix record, and the surrounding source. Accepts an id prefix.
 Counts by severity and status, plus hotspots — files ranked by summed risk
 rather than finding count.
 
+### `history`
+
+```bash
+redassay history
+redassay history --limit 5 --json
+```
+
+One row per scan: files walked, totals by severity, how many were new, how many
+were verified fixed, and the delta against the previous run. This is the answer
+to "is this getting better or worse", which no single scan can give you.
+
+### `prune`
+
+```bash
+redassay prune --dry-run
+redassay prune --older-than 180
+redassay prune --status dismissed --older-than 365
+```
+
+Drops long-settled findings. Defaults to `verified` only, and only those older
+than 90 days - a store that only grows becomes a store nobody reads, but a
+dismissal someone spent time on is expensive to lose and cheap to keep, so
+pruning anything else takes an explicit `--status`.
+
 ### `scanners` / `rules`
 
 ```bash
@@ -166,6 +205,8 @@ skipped with a warning rather than failing the batch.
 ---
 
 ## The queue
+
+### `queue`
 
 The board never edits code. It appends actions, and an agent drains them.
 
