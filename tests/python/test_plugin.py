@@ -164,3 +164,37 @@ class DocumentedJsonIsValidTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DocumentationCoverageTest(unittest.TestCase):
+    """Every command must appear in the CLI reference. An undocumented command
+    is a command nobody uses."""
+
+    def _commands(self):
+        import subprocess
+        import sys
+        help_text = subprocess.run(
+            [sys.executable, os.path.join(ROOT, "engine", "redassay_cli.py"), "--help"],
+            capture_output=True, text=True, check=False,
+        ).stdout
+        return set(re.search(r"\{([a-z,]+)\}", help_text).group(1).split(","))
+
+    def test_every_command_is_in_the_cli_reference(self):
+        reference = read("docs", "cli.md")
+        # Headings carry their arguments: "### `show <id>`".
+        headings = {
+            match.split()[0]
+            for match in re.findall(r"^#+ `([^`]+)`", reference, re.MULTILINE)
+        }
+        headings |= set(re.findall(r"^#+ .*`(\w+)`", reference, re.MULTILINE))
+        missing = sorted(self._commands() - headings)
+        self.assertEqual(missing, [], f"undocumented commands: {missing}")
+
+    def test_the_reference_documents_no_command_that_does_not_exist(self):
+        reference = read("docs", "cli.md")
+        headings = {
+            match.split()[0]
+            for match in re.findall(r"^### `([^`]+)`", reference, re.MULTILINE)
+        }
+        unknown = sorted(h for h in headings - self._commands() if h.isalpha())
+        self.assertEqual(unknown, [], f"documented but not a command: {unknown}")
