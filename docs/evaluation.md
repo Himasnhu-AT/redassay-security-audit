@@ -110,6 +110,14 @@ different again from shouting.
 `tests/python/test_engine.py` asserts the clean fixture never produces a
 high-confidence finding. That test is the false-positive budget, written down.
 
+## Reproducing the loop, not just the scan
+
+`bash scripts/demo.sh` walks the whole thing against a throwaway copy of the
+vulnerable fixture: scan, approve two fixes, dismiss one with a reason, drain the
+queue, patch, rescan. The two fixed findings come back `verified` with the diff
+recorded; the dismissal and the review note survive. It runs in CI, so the
+behaviour described in this document cannot quietly stop being true.
+
 ## What is not measured here
 
 - **Recall.** There is no ground-truth list of every vulnerability in Django, so

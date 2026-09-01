@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0
+## 0.1.0 - 2026-09-14
 
 First release.
 
@@ -46,8 +46,13 @@ First release.
 
 ### Output
 
-- Terminal, markdown, JSON and SARIF 2.1.0 with stable fingerprints.
-- `doctor` for environment diagnostics; `stats` with risk-weighted hotspots.
+- Terminal, markdown, JSON, SARIF 2.1.0 with stable fingerprints, and a
+  `quickfix` format any editor can jump through.
+- Export from the board without leaving it.
+- `doctor` for environment diagnostics, `stats` with risk-weighted hotspots,
+  `history` for the scan-over-scan trend, `prune` to keep the store readable.
+- `resolve` accepts a diff on stdin and reads the touched files out of it, so
+  the board shows what a fix actually changed.
 
 ### Performance
 
