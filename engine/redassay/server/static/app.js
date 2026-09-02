@@ -10,6 +10,7 @@ import {
   applyFilters, countBySeverity, countBySource, countByStatus, toggle, DEFAULT_FILTERS,
 } from "./lib/filters.js";
 import { Selection, describeBatch } from "./lib/selection.js";
+import { apply as applyHash, encode as encodeHash } from "./lib/urlstate.js";
 
 const STATUS_CHOICES = ["open", "confirmed", "queued", "fixing", "fixed", "verified", "dismissed"];
 const SORT_CHOICES = [
@@ -28,7 +29,7 @@ const state = {
   queue: { pending: [], claimed: [], stats: {} },
   stats: {},
   repo: "",
-  filters: { ...DEFAULT_FILTERS },
+  filters: applyHash(window.location.hash),
   selection: new Selection(),
   activeId: null,
   detail: null,
@@ -116,7 +117,18 @@ function renderHotspots() {
   el("hotspots").innerHTML = state.hotspots.map(hotspotRow).join("");
 }
 
+/** Keep the URL in step with the filters, without adding a history entry per
+ *  keystroke - replaceState means the back button still leaves the board. */
+function syncHash() {
+  const next = encodeHash(state.filters);
+  const target = next ? `#${next}` : window.location.pathname;
+  if (window.location.hash.replace(/^#/, "") !== next) {
+    window.history.replaceState(null, "", target);
+  }
+}
+
 function renderList() {
+  syncHash();
   state.visible = applyFilters(state.findings, state.filters);
   state.selection.prune(state.visible);
 
@@ -453,6 +465,12 @@ function wire() {
     }
   });
 
+  window.addEventListener("hashchange", () => {
+    state.filters = applyHash(window.location.hash);
+    renderFacets();
+    renderList();
+  });
+
   document.addEventListener("keydown", (event) => {
     const typing = ["INPUT", "TEXTAREA"].includes(event.target.tagName);
     if (event.key === "/" && !typing) {
@@ -492,5 +510,6 @@ function wire() {
 }
 
 wire();
+el("search").value = state.filters.query || "";
 refresh({ force: true }).catch((error) => toast(error.message, true));
 setInterval(() => refresh().catch(() => {}), POLL_MS);
