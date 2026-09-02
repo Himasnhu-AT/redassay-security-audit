@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
-from . import gitinfo, models, severity as sev, triage as triage_mod
+from . import __version__, gitinfo, models, severity as sev, triage as triage_mod
 from .config import Config
 from .models import Finding
 from .scanners import ScanContext, build_all
@@ -39,6 +39,7 @@ class ScanResult:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "started_at": models.utcnow(),
+            "engine_version": __version__,
             "files_scanned": self.files_scanned,
             "bytes_scanned": self.bytes_scanned,
             "by_language": self.by_language,
