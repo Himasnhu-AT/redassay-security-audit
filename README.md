@@ -89,6 +89,10 @@ For each one you can:
 Keyboard: `j`/`k` to move, `x` to select, `f` to request a fix, `d` to dismiss,
 `c` to comment, `/` to search.
 
+Filters live in the URL, so a view is a link: send someone
+`#sev=critical&path=app/billing/` and they land on exactly what you were looking
+at. The back button works, and a reload keeps your filtering.
+
 Nothing on the board edits your code. It writes to an approval queue; an agent
 does the work and records what it did.
 
