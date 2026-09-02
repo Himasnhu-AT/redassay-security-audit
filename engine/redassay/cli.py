@@ -623,6 +623,22 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     else:
         record("store", True, "not created yet - run `redassay scan`")
 
+    try:
+        # A store that failed to load above must not make this raise - the whole
+        # point of doctor is to report a broken store, not to die on one.
+        last = store.last_scan() if store.exists else None
+    except Exception:                              # noqa: BLE001
+        last = None
+    if last:
+        scanned_with = last.get("engine_version") or "unknown"
+        record(
+            "store version",
+            scanned_with in (__version__, "unknown"),
+            f"last scanned with redassay {scanned_with}"
+            + ("" if scanned_with in (__version__, "unknown")
+               else f" - this is {__version__}; rescan to pick up rule changes"),
+        )
+
     config = config_mod.load(root)
     probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     probe.settimeout(0.2)
