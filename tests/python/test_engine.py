@@ -180,3 +180,19 @@ class LocalRulePackTest(TempRepo):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ScanProvenanceTest(TempRepo):
+    """A store outlives the version that wrote it. Recording which one did turns
+    "why is this finding still here" into a one-line answer."""
+
+    def test_the_scan_record_names_the_engine_version(self):
+        from redassay import __version__
+        self.write("app.py", "eval(payload)\n")
+        scan_and_merge(config_mod.load(self.root))
+        self.assertEqual(Store.open(self.root).last_scan()["engine_version"], __version__)
+
+    def test_git_context_is_recorded_when_available(self):
+        self.write("app.py", "eval(payload)\n")
+        result = scan_and_merge(config_mod.load(self.root))
+        self.assertIn("git", result.to_dict())

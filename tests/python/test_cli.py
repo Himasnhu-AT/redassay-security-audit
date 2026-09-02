@@ -672,3 +672,20 @@ class ResolveDiffTest(CliTestCase):
         git_style = "+++ b/app/views.py\n"
         plain = "+++ app/views.py\t2026-09-14 14:20:28\n"
         self.assertEqual(_files_from_diff(git_style), _files_from_diff(plain))
+
+
+class DoctorVersionTest(CliTestCase):
+    def test_it_reports_which_version_last_scanned(self):
+        self.seed()
+        checks = {c["check"]: c for c in self.run_json("doctor")["checks"]}
+        self.assertIn("store version", checks)
+        self.assertTrue(checks["store version"]["ok"])
+
+    def test_a_store_written_by_another_version_is_flagged(self):
+        self.seed()
+        store = Store.open(self.root)
+        store.load()["scans"][-1]["engine_version"] = "0.0.1-ancient"
+        store.save()
+        checks = {c["check"]: c for c in self.run_json("doctor")["checks"]}
+        self.assertFalse(checks["store version"]["ok"])
+        self.assertIn("rescan", checks["store version"]["detail"])
