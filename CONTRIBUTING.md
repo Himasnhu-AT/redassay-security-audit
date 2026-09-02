@@ -4,11 +4,14 @@
 
 ```bash
 git clone <this repo> && cd redassay
-bash scripts/run-tests.sh
-python3 engine/redassay_cli.py doctor
+bash scripts/check.sh          # everything CI runs
+bash scripts/check.sh --quick  # just the tests and the linters
 ```
 
-No install step. If either of those needs one, that is a bug.
+No install step. If any of that needs one, that is a bug.
+
+`python3 engine/redassay_cli.py doctor` answers most "why is this not working"
+questions directly.
 
 ## The rules this project holds itself to
 
@@ -69,8 +72,8 @@ can do.
 
 ## Tests
 
-- Python: `unittest`, no pytest. 670 tests, no dependencies.
-- JavaScript: `node:test`. 59 tests over the board's modules.
+- Python: `unittest`, no pytest. 699 tests, no dependencies.
+- JavaScript: `node:test`. 75 tests over the board's modules.
 - Both: `bash scripts/run-tests.sh`
 
 If you fix a false positive, add it to `tests/python/test_false_positives.py`

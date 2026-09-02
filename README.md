@@ -204,8 +204,8 @@ engine/redassay/   the scanner - stdlib only
   scanners/        pattern, secrets, python-ast, javascript, deps, cicd, configs
   rules/           nine JSON rule packs
   server/          the board: HTTP server, JSON API, static UI
-tests/python/      670 unittest tests
-tests/js/          59 node:test tests for the board's modules
+tests/python/      699 unittest tests
+tests/js/          75 node:test tests for the board's modules
 fixtures/          vulnerable apps, and one clean control app
 ```
 
@@ -219,10 +219,11 @@ written up alongside it in [`docs/performance.md`](docs/performance.md).
 ## Running the tests
 
 ```bash
-bash scripts/run-tests.sh
+bash scripts/run-tests.sh      # both suites
+bash scripts/check.sh          # everything CI runs: linters, tests, demo, fixtures
 ```
 
-Both suites, no installation. Python via `unittest`, JavaScript via `node:test`.
+No installation. Python via `unittest`, JavaScript via `node:test`.
 
 ## License
 
