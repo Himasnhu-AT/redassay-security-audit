@@ -63,6 +63,8 @@ jobs:
       - name: The demo still walks the whole loop
         run: bash scripts/demo.sh
 
+      # scripts/check.sh is what contributors run locally. Running it here too
+      # is how local and CI stay honest about each other.
       - name: The clean fixture stays clean
         run: |
           set -euo pipefail
