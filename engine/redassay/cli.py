@@ -501,6 +501,76 @@ def cmd_rules(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_surface(args: argparse.Namespace) -> int:
+    """Inventory the ways in.
+
+    This is the artifact an audit should start from. A scanner tells you which
+    lines look dangerous; this tells you what a stranger can reach and what
+    stands in front of it - which is the question that decides whether any of
+    those lines matter.
+    """
+    from . import surface as surface_mod, tech as tech_mod
+    from .walker import WalkOptions, collect
+
+    config = config_mod.load(args.root, include=args.include or [], exclude=args.exclude or [])
+    files = collect(config.root, WalkOptions(
+        include=list(config.include),
+        exclude=list(config.exclude),
+        respect_gitignore=config.respect_gitignore,
+        exclude_tests=args.exclude_tests,
+    ))
+    detection = tech_mod.detect(files)
+    entries = surface_mod.inventory(files, detection)
+    if args.kind:
+        entries = [e for e in entries if e.kind in args.kind]
+    if args.unprotected:
+        entries = surface_mod.needs_review(entries)
+
+    stats = surface_mod.summarize(entries)
+    if args.json:
+        _emit_json({
+            "tech": detection.to_dict(),
+            "summary": stats,
+            "entry_points": [e.to_dict() for e in entries],
+        })
+        return EXIT_OK
+
+    _out(f"stack: {tech_mod.summarize(detection)}")
+    _out("")
+    if not entries:
+        _out("no entry points found")
+        _out("  If that is wrong, the framework may not be detected - check `redassay surface --json`")
+        return EXIT_OK
+
+    color = _color_enabled(args)
+    width = min(max((len(e.label) for e in entries), default=10), 52)
+    for entry in entries[: args.limit]:
+        mark = _AUTH_MARK.get(entry.auth, "?")
+        painted = report_mod._paint(mark, _AUTH_COLOR.get(entry.auth, ""), color)
+        _out(f"  {painted} {entry.label[:width]:<{width}}  {entry.location}")
+    if args.limit and len(entries) > args.limit:
+        _out(f"  ... and {len(entries) - args.limit} more")
+
+    _out("")
+    _out(f"{stats['total']} entry points, {stats['externally_reachable']} externally reachable")
+    for state, count in sorted(stats["by_auth"].items()):
+        _out(f"  {_AUTH_MARK.get(state, '?')} {state:<12} {count}")
+    if stats["unprotected"]:
+        _out("")
+        _out(f"{stats['unprotected']} reachable and mutating with nothing auth-shaped nearby.")
+        _out("Proximity is not proof - open them and check. That is the point of the list.")
+    return EXIT_OK
+
+
+_AUTH_MARK = {"guarded": "+", "middleware": "~", "public": "!", "none-found": "x", "unknown": "?"}
+_AUTH_COLOR = {
+    "guarded": "\033[38;5;35m",
+    "middleware": "\033[38;5;220m",
+    "public": "\033[38;5;208m",
+    "none-found": "\033[38;5;197m",
+}
+
+
 def cmd_history(args: argparse.Namespace) -> int:
     """Scan-over-scan trend. Answers "is this getting better or worse"."""
     store = _require_store(args.root)
@@ -963,6 +1033,20 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("rules", help="list loaded rules", parents=[common])
     p.add_argument("--pack", default=None)
     p.set_defaults(func=cmd_rules)
+
+    p = sub.add_parser("surface", help="inventory the entry points an attacker can reach",
+                       parents=[common])
+    p.add_argument("--kind", action="append",
+                   choices=["http", "server-action", "queue", "socket", "graphql", "cli",
+                            "webhook", "scheduled"],
+                   help="restrict to one kind of entry point (repeatable)")
+    p.add_argument("--unprotected", action="store_true",
+                   help="only those with nothing auth-shaped in front of them")
+    p.add_argument("--include", action="append")
+    p.add_argument("--exclude", action="append")
+    p.add_argument("--exclude-tests", action="store_true")
+    p.add_argument("--limit", type=int, default=60)
+    p.set_defaults(func=cmd_surface)
 
     p = sub.add_parser("history", help="scan-over-scan trend", parents=[common])
     p.add_argument("--limit", type=int, default=20)
