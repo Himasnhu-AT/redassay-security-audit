@@ -49,7 +49,17 @@ $REDASSAY scan --json > /tmp/redassay-scan.json
 
 Read the summary counts. Do not paste the whole file into the conversation.
 
-**2. Model-driven review** — the half the scanners cannot do.
+**2. Map the attack surface.**
+
+```bash
+$REDASSAY surface --json > /tmp/redassay-surface.json
+```
+
+Every entry point, what stands in front of it, and the detected frameworks with
+the mistakes each one invites. Read the summary, not the whole file. The
+`none-found` entries are where the review starts.
+
+**3. Model-driven review** — the half the scanners cannot do.
 
 Regex and AST rules find *shapes*. They cannot find a missing authorization
 check, a broken invariant, a business-logic flaw, or a race. That is your job.
@@ -95,7 +105,7 @@ Rules for what you write:
 - Do not restate what the scanner already found. Check `/tmp/redassay-scan.json`
   first — if the rule id is there for that line, it is already recorded.
 
-**3. Confirm or drop the scanner's uncertain findings.**
+**4. Confirm or drop the scanner's uncertain findings.**
 
 ```bash
 $REDASSAY list --json --min-severity medium
@@ -118,7 +128,7 @@ $REDASSAY dismiss <id> --reason "Argument is a module-level constant, never requ
 This step is what makes the board worth opening. A board full of unreviewed
 regex hits is a worse experience than no board.
 
-**4. Start the board.**
+**5. Start the board.**
 
 ```bash
 $REDASSAY serve --no-browser &
@@ -127,7 +137,7 @@ $REDASSAY serve --no-browser &
 Tell the user the URL, the finding count by severity, and the three things you
 most want them to look at. Then **stop and wait** — do not start fixing.
 
-**5. Then run `watch`** (below) so their decisions get acted on.
+**6. Then run `watch`** (below) so their decisions get acted on.
 
 ---
 
@@ -135,7 +145,15 @@ most want them to look at. Then **stop and wait** — do not start fixing.
 Just the deterministic pass. Print the summary. No model review, no board.
 
 ### `review`
-Step 2 only — model-driven review against an existing store.
+Steps 2 and 3 only — surface map plus model-driven review against an existing store.
+
+### `surface`
+```bash
+$REDASSAY surface
+$REDASSAY surface --unprotected
+```
+The entry-point inventory on its own. Useful as the first thing you run on an
+unfamiliar repository, before any scanning.
 
 ### `board`
 ```bash

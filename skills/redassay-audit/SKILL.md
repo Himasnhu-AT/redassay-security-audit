@@ -10,10 +10,31 @@ A scanner answers "does this code contain a dangerous shape?". It cannot answer
 happens when two of these run at once?". Those need someone who understands what
 the code is *for*. That is the work described here.
 
-## Start from the trust boundaries, not the file tree
+## Start from the entry points, not the file tree
 
-Reading a repository top to bottom finds nothing. Enumerate the places untrusted
-data enters, then follow each one inward:
+Reading a repository top to bottom finds nothing. Start from the list of places
+untrusted data enters - and do not build that list by grepping, because the
+review is then only as complete as the greps you thought of.
+
+```bash
+$REDASSAY surface --json
+```
+
+That returns every HTTP route, server action, queue consumer, socket handler,
+webhook and scheduled job the engine can find, each with what stands in front of
+it, plus the detected frameworks and the specific mistakes each one invites.
+
+Read the `auth` field as a hint, never a verdict:
+
+- `none-found` - nothing auth-shaped nearby. **Start here.**
+- `middleware` - something unidentified sits in front. Open it and find out what.
+- `public` - an explicit opt-out. Someone decided; check they were right.
+- `guarded` - something auth-shaped is adjacent. This is the weakest signal in
+  the set: an `isAdmin` that returns true for everyone reads as a guard.
+
+The list will also miss things - a router mounted through a variable, a handler
+registered by a factory. Treat it as a floor, not a ceiling, and add what you
+find. These are the boundaries it is looking for:
 
 | Boundary | Where to look |
 | --- | --- |
