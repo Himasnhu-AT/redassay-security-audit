@@ -107,6 +107,44 @@ fix record, and the surrounding source. Accepts an id prefix.
 Counts by severity and status, plus hotspots — files ranked by summed risk
 rather than finding count.
 
+### `surface`
+
+```bash
+redassay surface
+redassay surface --unprotected
+redassay surface --kind queue --kind socket
+redassay surface --json
+```
+
+Inventories the ways in: HTTP routes, server actions, queue consumers, socket
+handlers, webhooks, scheduled jobs. For each one it records what it is, where it
+is, and what stands in front of it.
+
+```
+  + GET  /dashboard            app/routes/index.js:44
+  x POST /admin/wipe           app/routes/admin.js:12
+```
+
+| Mark | Meaning |
+| --- | --- |
+| `+` | something recognisably auth-shaped is in front of it |
+| `~` | an unidentified middleware argument sits between the path and the handler |
+| `!` | an explicit opt-out - `@csrf_exempt`, `AllowAny`, `@Public` |
+| `x` | nothing found |
+
+**`x` is a hint, not a verdict.** Proximity is not proof: a guard three files
+away in a router chain is invisible here, and an `isAdmin` that returns true for
+everyone reads as a guard. The value is the *list* - a complete enumeration of
+what a stranger can reach, which is what an audit should start from and what
+grepping never quite produces.
+
+Routes whose job is to be unauthenticated - `/login`, `/health`, `/webhooks/*` -
+are recognised and sorted last rather than counted as problems.
+
+Framework detection drives the whole thing, so `redassay surface --json`
+includes the detected stack and, for known frameworks, the specific mistakes
+that framework invites.
+
 ### `history`
 
 ```bash
