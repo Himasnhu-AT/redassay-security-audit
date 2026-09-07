@@ -12,3 +12,7 @@ build/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Local tooling caches
+graft/
+.deepsec/
