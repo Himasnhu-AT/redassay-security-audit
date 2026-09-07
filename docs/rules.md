@@ -20,6 +20,7 @@ Covering 59 distinct CWEs.
 | `cicd` | CI/CD workflow security: trigger abuse, script injection, unpinned actions |
 | `configs` | Environment files, Dockerfiles, compose and Kubernetes manifests |
 | `dependencies` | Known-vulnerable dependency versions and supply-chain hygiene in manifests |
+| `exposure` | Published services: port mappings, Kubernetes Services, open CIDRs, wildcard binds |
 | `javascript` | JS/TS analysis over a comment- and string-stripped view, with request taint tracking |
 | `pattern` | Rule-pack driven source matching with negative and proximity guards |
 | `python-ast` | Python AST analysis with intra-procedural taint tracking |
@@ -194,7 +195,7 @@ Application, container and cloud configuration that is permissive by default or 
 | `config.cookie-insecure-flags`<br>Session cookie without Secure/HttpOnly/SameSite | medium | python, javascript, typescript, php, ru... | CWE-1004 |
 | `config.dockerfile-root-user`<br>Container image runs as root | medium | dockerfile | CWE-250 |
 | `config.security-headers-missing`<br>Content-Security-Policy set to a permissive value | medium | * | CWE-1021 |
-| `config.bind-all-interfaces`<br>Service bound to 0.0.0.0 | low | python, javascript, typescript, go, yam... | CWE-1327 |
+| `config.bind-all-interfaces`<br>Service bound to 0.0.0.0 | low | python, javascript, typescript, go | CWE-1327 |
 | `config.dockerfile-latest-tag`<br>Base image pinned to :latest or unpinned | low | dockerfile | CWE-1104 |
 
 ### ssrf

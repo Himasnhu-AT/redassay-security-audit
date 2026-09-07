@@ -136,6 +136,13 @@ EQUIVALENT = {
     "config.curl-pipe-shell": "curl-pipe",
     "ci.curl-pipe-shell": "curl-pipe",
 
+    # exposure - the dedicated scanner knows the port and what is behind it,
+    # so it supersedes the generic pattern rules at the same line
+    "expose.wildcard-bind": "wildcard-bind",
+    "config.bind-all-interfaces": "wildcard-bind",
+    "expose.open-cidr": "open-to-internet",
+    "config.terraform-public-bucket": "open-to-internet",
+
     # secrets - one credential on one line is one finding, however it was spotted
     "secret.hardcoded-assignment": "hardcoded-secret",
     "config.django-secret-key-literal": "hardcoded-secret",
