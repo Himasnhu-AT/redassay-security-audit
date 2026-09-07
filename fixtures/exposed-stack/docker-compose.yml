@@ -1,0 +1,38 @@
+# VULN pack: exposure. A stack that publishes everything it has.
+services:
+  web:
+    image: nginx:1.25
+    ports:
+      # VULN: expose.published-port
+      - "8080:80"
+
+  api:
+    image: myorg/api:1.4.2
+    ports:
+      - "127.0.0.1:3001:3000"   # bound to loopback - not a finding
+
+  postgres:
+    image: postgres:16
+    ports:
+      # VULN: expose.published-datastore
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      # VULN: expose.published-datastore
+      - "0.0.0.0:6379:6379"
+
+  mongo:
+    image: mongo:7
+    ports:
+      # VULN: expose.published-datastore
+      - "27017:27017"
+
+  elastic:
+    image: elasticsearch:8.13.0
+    ports:
+      # VULN: expose.published-datastore
+      - target: 9200
+        published: 9200
+        protocol: tcp

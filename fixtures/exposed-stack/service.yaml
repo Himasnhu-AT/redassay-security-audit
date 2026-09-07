@@ -1,0 +1,28 @@
+# VULN pack: exposure
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  # VULN: expose.k8s-loadbalancer
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: api
+          image: myorg/api:1.4.2
+          ports:
+            # VULN: expose.k8s-host-port
+            - containerPort: 6379
+              hostPort: 6379
