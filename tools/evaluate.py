@@ -7,7 +7,7 @@ only has an answer on real code, so this script scans whatever repositories you
 point it at and prints the shape of the result: counts, rule frequency, and the
 files that carry the most risk.
 
-    python3 tools/evaluate.py ~/src/pygoat ~/src/django
+    python3 tools/evaluate.py ~/src/my-app ~/src/other-app
     python3 tools/evaluate.py --json ~/src/*/
 
 Reading the output is the actual work. A rule near the top of the frequency

@@ -188,10 +188,10 @@ A scanner is only as useful as its noise floor. The measures taken here:
 `tests/python/test_false_positives.py` is a regression suite built from findings
 that real repositories produced and a human rejected.
 
-[`docs/evaluation.md`](docs/evaluation.md) has the measured results on PyGoat,
-NodeGoat and Django - including the four false positives NodeGoat produced and
-the honest finding that Django's own internals light up the rules because a
-framework *implements* the primitives the rules look for.
+[`docs/evaluation.md`](docs/evaluation.md) has the measured results, including
+the false positives real repositories produced and the honest finding that a
+framework's own internals light up the rules - because a framework *implements*
+the primitives the rules look for.
 
 ## Layout
 
@@ -211,8 +211,7 @@ fixtures/          vulnerable apps, and one clean control app
 
 ## Performance
 
-Roughly 1.5-3 MB/s: a 250-file project in under a second, Django's 5,375 files in
-around 20. A literal prefilter in front of every pattern rule does most of the
+Roughly 1.5-3 MB/s: a 250-file project in under a second, 5,375 files in around 20. A literal prefilter in front of every pattern rule does most of the
 work - and two optimizations that looked obvious and measured *slower* are
 written up alongside it in [`docs/performance.md`](docs/performance.md).
 

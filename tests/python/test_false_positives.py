@@ -22,7 +22,7 @@ def secret_findings(path: str, content: str, language: str):
 
 
 class MarkupSampleTest(unittest.TestCase):
-    """NodeGoat: a tutorial page documenting eval() was reported as eval()."""
+    """A tutorial page documenting an eval() call was reported as an eval() call."""
 
     TUTORIAL = """<html><body>
 <p>The handler insecurely uses <code>eval()</code> to parse input.</p>
@@ -57,8 +57,8 @@ class MarkupSampleTest(unittest.TestCase):
 
 
 class WeakRandomProximityTest(unittest.TestCase):
-    """NodeGoat: a date helper was flagged because an unrelated function two
-    lines below took a `password` argument."""
+    """A date helper was flagged because an unrelated function two lines below
+    took a `password` argument."""
 
     DATE_HELPER = """
 this.getRandomFutureDate = () => {
@@ -85,8 +85,8 @@ this.validateLogin = (userName, password, callback) => {
 
 
 class ProseDowngradeTest(unittest.TestCase):
-    """NodeGoat: a connection string in the README was reported at the same
-    severity as one in a settings module."""
+    """A connection string in a README was reported at the same severity as one
+    in a settings module."""
 
     LINE = 'Connect with `mongodb://admin:Passw0rd123@localhost:27017/goat`\n'
 

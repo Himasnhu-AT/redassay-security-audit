@@ -11,7 +11,7 @@ python3 tools/benchmark.py /path/to/repo --repeat 3
 
 ## Where the time goes
 
-Django, 5,375 files, 34 MB:
+A large Python web framework, 5,375 files, 34 MB:
 
 | Scanner | Time | Findings |
 | --- | --- | --- |
@@ -38,8 +38,8 @@ alternation groups (including nested ones), and returns nothing for anything
 else. Returning nothing means "run the rule normally", which is always correct.
 
 It covers 96% of the rule packs and measures **2.3-3x** on the pattern scanner,
-with output verified byte-identical on Django, PyGoat, NodeGoat and all four
-fixtures.
+with output verified byte-identical across every corpus it was measured on and all
+four fixtures.
 
 ## Three optimizations that did not work
 
@@ -58,8 +58,8 @@ candidate list allocates once per line across 800,000 lines. The gate cost more
 than the work it skipped.
 
 **A trigger gate in front of `ast.parse()`.** Skip parsing a Python file that
-contains none of the substrings any AST rule needs. It skipped **50.6%** of
-Django's 2,932 Python files and measured **1.00x** - exactly no change. The parse
+contains none of the substrings any AST rule needs. It skipped **50.6%** of a
+large framework's 2,932 Python files and measured **1.00x** - exactly no change. The parse
 cost is concentrated in the large files, and a large Python file always contains
 `open`, `assert` or `except`. The substring scan cost about what the skipped
 parses saved.

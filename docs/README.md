@@ -23,8 +23,8 @@ Start with the root [README](../README.md); this is the map of everything else.
   the pieces are separate.
 - [**architecture.md**](architecture.md) - the scan pipeline, finding identity,
   the scope of the taint tracker, and how the board is hardened.
-- [**evaluation.md**](evaluation.md) - measured results on PyGoat, NodeGoat and
-  Django, including the false positives real repositories produced and what was
+- [**evaluation.md**](evaluation.md) - measured results on real codebases,
+  including the false positives real repositories produced and what was
   changed in response.
 - [**performance.md**](performance.md) - where the time goes, the optimization
   that worked, and the two that looked obvious and measured slower.

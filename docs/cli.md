@@ -57,8 +57,7 @@ redassay scan --scanner secrets --json
 ```
 
 `--exclude-tests` is worth reaching for on an unfamiliar repository. Test suites
-construct malicious input on purpose; on Django, 59% of all findings came from
-its own tests. The flag is not the default because a vulnerability in a test
+construct malicious input on purpose; on one large framework, 59% of all findings came from its own tests. The flag is not the default because a vulnerability in a test
 helper is still a vulnerability - it is a decision, not a cleanup.
 
 `--since` is what makes this usable as a pull-request gate. It asks git which

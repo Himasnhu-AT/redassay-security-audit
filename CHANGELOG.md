@@ -57,7 +57,7 @@ First release.
 ### Performance
 
 - A literal prefilter in front of every pattern rule: 2.3-3x, output verified
-  identical on Django, PyGoat, NodeGoat and the fixtures.
+  identical on every corpus it was measured on.
 - Two optimizations that measured slower are documented in
   `docs/performance.md` rather than left for someone to rediscover.
 
