@@ -112,3 +112,169 @@ spec:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExposureTest(unittest.TestCase):
+    """Published services. The question that comes before "is this code safe":
+    can anyone outside reach it at all."""
+
+    def _scan(self, path, content, language):
+        from redassay.scanners.exposure import ExposureScanner
+        return run_scanner(ExposureScanner(), path, content, language)
+
+    def _rules(self, path, content, language):
+        return {f.rule_id for f in self._scan(path, content, language)}
+
+    # -- compose ---------------------------------------------------------
+    COMPOSE = (
+        "services:\n"
+        "  web:\n"
+        "    image: nginx:1.25\n"
+        "    ports:\n"
+        '      - "8080:80"\n'
+        "  db:\n"
+        "    image: postgres:16\n"
+        "    ports:\n"
+        '      - "5432:5432"\n'
+        "  cache:\n"
+        "    image: redis:7\n"
+        "    ports:\n"
+        '      - "127.0.0.1:6379:6379"\n'
+    )
+
+    def test_a_published_datastore_is_critical(self):
+        findings = {f.rule_id: f for f in self._scan("docker-compose.yml", self.COMPOSE, "compose")}
+        self.assertIn("expose.published-datastore", findings)
+        self.assertEqual(findings["expose.published-datastore"].severity, "critical")
+
+    def test_the_finding_names_the_service_behind_the_port(self):
+        finding = next(f for f in self._scan("docker-compose.yml", self.COMPOSE, "compose")
+                       if f.rule_id == "expose.published-datastore")
+        self.assertIn("PostgreSQL", finding.title)
+
+    def test_an_ordinary_web_port_is_not_critical(self):
+        finding = next(f for f in self._scan("docker-compose.yml", self.COMPOSE, "compose")
+                       if f.rule_id == "expose.published-port")
+        self.assertEqual(finding.severity, "medium")
+
+    def test_a_loopback_mapping_is_not_published(self):
+        """This is the recommended fix - flagging it would be flagging the remedy."""
+        lines = [f.location.line for f in self._scan("docker-compose.yml", self.COMPOSE, "compose")]
+        self.assertNotIn(13, lines)
+
+    def test_explicit_wildcard_host_is_published(self):
+        content = 'services:\n  db:\n    image: redis:7\n    ports:\n      - "0.0.0.0:6379:6379"\n'
+        self.assertIn("expose.published-datastore", self._rules("docker-compose.yml", content, "compose"))
+
+    def test_long_form_syntax(self):
+        content = (
+            "services:\n  es:\n    image: elasticsearch:8\n    ports:\n"
+            "      - target: 9200\n        published: 9200\n        protocol: tcp\n"
+        )
+        self.assertIn("expose.published-datastore", self._rules("docker-compose.yml", content, "compose"))
+
+    def test_a_commented_mapping_is_ignored(self):
+        content = 'services:\n  db:\n    image: postgres:16\n    ports:\n      # - "5432:5432"\n'
+        self.assertEqual(self._rules("docker-compose.yml", content, "compose"), set())
+
+    def test_the_remediation_offers_the_loopback_form(self):
+        finding = next(f for f in self._scan("docker-compose.yml", self.COMPOSE, "compose")
+                       if f.rule_id == "expose.published-datastore")
+        self.assertIn("127.0.0.1:5432:5432", finding.remediation)
+
+    # -- kubernetes ------------------------------------------------------
+    def test_loadbalancer_service(self):
+        content = "apiVersion: v1\nkind: Service\nspec:\n  type: LoadBalancer\n"
+        self.assertIn("expose.k8s-loadbalancer", self._rules("svc.yaml", content, "yaml"))
+
+    def test_nodeport_is_lower_severity_than_loadbalancer(self):
+        node = self._scan("svc.yaml", "kind: Service\nspec:\n  type: NodePort\n", "yaml")[0]
+        load = self._scan("svc.yaml", "kind: Service\nspec:\n  type: LoadBalancer\n", "yaml")[0]
+        self.assertEqual(node.severity, "medium")
+        self.assertEqual(load.severity, "high")
+
+    def test_clusterip_is_not_a_finding(self):
+        content = "apiVersion: v1\nkind: Service\nspec:\n  type: ClusterIP\n"
+        self.assertEqual(self._rules("svc.yaml", content, "yaml"), set())
+
+    def test_host_port_as_a_list_item(self):
+        content = "kind: Pod\nspec:\n  containers:\n    - ports:\n        - hostPort: 6379\n"
+        findings = self._scan("pod.yaml", content, "yaml")
+        self.assertEqual(findings[0].rule_id, "expose.k8s-host-port")
+        self.assertEqual(findings[0].severity, "high")
+
+    def test_host_port_as_a_later_key(self):
+        content = ("kind: Pod\nspec:\n  containers:\n    - ports:\n"
+                   "        - containerPort: 6379\n          hostPort: 6379\n")
+        self.assertIn("expose.k8s-host-port", self._rules("pod.yaml", content, "yaml"))
+
+    # -- cloud -----------------------------------------------------------
+    def test_open_cidr_on_a_database_port_is_critical(self):
+        content = 'resource "x" {\n  from_port   = 5432\n  cidr_blocks = ["0.0.0.0/0"]\n}\n'
+        finding = next(f for f in self._scan("main.tf", content, "terraform")
+                       if f.rule_id == "expose.open-cidr")
+        self.assertEqual(finding.severity, "critical")
+        self.assertIn("PostgreSQL", finding.title)
+
+    def test_open_cidr_on_a_web_port_is_high(self):
+        content = 'resource "x" {\n  from_port   = 443\n  cidr_blocks = ["0.0.0.0/0"]\n}\n'
+        finding = next(f for f in self._scan("main.tf", content, "terraform")
+                       if f.rule_id == "expose.open-cidr")
+        self.assertEqual(finding.severity, "high")
+
+    def test_a_scoped_cidr_is_not_a_finding(self):
+        content = 'resource "x" {\n  from_port   = 5432\n  cidr_blocks = ["10.0.0.0/8"]\n}\n'
+        self.assertNotIn("expose.open-cidr", self._rules("main.tf", content, "terraform"))
+
+    def test_ipv6_open_cidr(self):
+        content = 'resource "x" {\n  from_port = 22\n  cidr_blocks = ["::/0"]\n}\n'
+        self.assertIn("expose.open-cidr", self._rules("main.tf", content, "terraform"))
+
+    # -- dockerfile and binds --------------------------------------------
+    def test_expose_of_a_datastore_port(self):
+        self.assertIn("expose.dockerfile-datastore-port",
+                      self._rules("Dockerfile", "FROM postgres:16\nEXPOSE 5432\n", "dockerfile"))
+
+    def test_expose_of_a_web_port_is_not_a_finding(self):
+        self.assertEqual(self._rules("Dockerfile", "FROM nginx\nEXPOSE 80\n", "dockerfile"), set())
+
+    def test_wildcard_bind_on_a_datastore_port_is_high(self):
+        content = 'port = 6379\napp.run(host="0.0.0.0", port=port)\n'
+        finding = next(f for f in self._scan("serve.py", content, "python")
+                       if f.rule_id == "expose.wildcard-bind")
+        self.assertEqual(finding.severity, "high")
+
+    def test_wildcard_bind_on_an_app_port_is_low(self):
+        content = 'app.run(host="0.0.0.0", port=8000)\n'
+        finding = next(f for f in self._scan("serve.py", content, "python")
+                       if f.rule_id == "expose.wildcard-bind")
+        self.assertEqual(finding.severity, "low")
+
+    def test_loopback_bind_is_not_a_finding(self):
+        self.assertEqual(self._rules("serve.py", 'app.run(host="127.0.0.1")\n', "python"), set())
+
+
+class ExposureFixtureTest(unittest.TestCase):
+    def test_every_labelled_defect_in_the_fixture_fires(self):
+        import os
+        from redassay import config as config_mod
+        from redassay.engine import scan
+        from .helpers import FIXTURES
+
+        findings = scan(config_mod.load(os.path.join(FIXTURES, "exposed-stack"))).findings
+        found = {f.rule_id for f in findings}
+        for expected in ("expose.published-port", "expose.published-datastore",
+                         "expose.k8s-loadbalancer", "expose.k8s-host-port",
+                         "expose.open-cidr", "expose.dockerfile-datastore-port",
+                         "expose.wildcard-bind"):
+            self.assertIn(expected, found, expected)
+
+    def test_the_loopback_mapping_produces_nothing(self):
+        import os
+        from redassay import config as config_mod
+        from redassay.engine import scan
+        from .helpers import FIXTURES
+
+        findings = scan(config_mod.load(os.path.join(FIXTURES, "exposed-stack"))).findings
+        compose = [f for f in findings if f.path.endswith("docker-compose.yml")]
+        self.assertNotIn(11, [f.line for f in compose])
