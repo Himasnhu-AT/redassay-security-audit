@@ -60,6 +60,12 @@ _COMPOSE_PORT = re.compile(
     r""":(?P<container_port>\d{1,5})(?:-\d{1,5})?"""
     r"""(?:/(?:tcp|udp))?["']?\s*$"""
 )
+#: The short form - `- 80` or `- "80"` with no host side. Docker publishes it on
+#: an *ephemeral host port bound to every interface*, which is the least obvious
+#: and most common way a compose file ends up reachable from the network: it
+#: looks like it is only naming a container port.
+_COMPOSE_SHORT_ONLY = re.compile(r"""^\s*-\s*["']?(?P<container_port>\d{1,5})(?:/(?:tcp|udp))?["']?\s*$""")
+
 _COMPOSE_LONG_PUBLISHED = re.compile(r"^\s*published\s*:\s*[\"']?(?P<host_port>\d{1,5})")
 _COMPOSE_LONG_HOST_IP = re.compile(r"^\s*host_ip\s*:\s*[\"']?(?P<host_ip>[0-9a-fA-F:.]+)")
 _COMPOSE_SERVICE = re.compile(r"^  (?P<name>[A-Za-z0-9_.-]+)\s*:\s*$")
@@ -157,10 +163,24 @@ class ExposureScanner(Scanner):
         service_name = ""
         image = ""
         pending_host_ip: Optional[str] = None
+        # `ports:` publishes to the host; `expose:` only opens the port to other
+        # services on the same network. Conflating them would report every
+        # internal database link as an exposure.
+        in_ports_block = False
+        ports_indent = 0
 
         for index, line in enumerate(lines):
             if line.strip().startswith("#"):
                 continue
+
+            stripped = line.strip()
+            indent = len(line) - len(line.lstrip())
+            if stripped in ("ports:", "expose:"):
+                in_ports_block = stripped == "ports:"
+                ports_indent = indent
+                continue
+            if stripped and indent <= ports_indent and not stripped.startswith("-"):
+                in_ports_block = False
             service = _COMPOSE_SERVICE.match(line)
             if service:
                 service_name, image = service.group("name"), ""
@@ -170,9 +190,23 @@ class ExposureScanner(Scanner):
                 image = image_match.group("image")
                 continue
 
+            if in_ports_block:
+                short_only = _COMPOSE_SHORT_ONLY.match(line)
+                if short_only:
+                    container_port = int(short_only.group("container_port"))
+                    yield self._short_form_finding(source, index + 1, line, container_port,
+                                                   service_name, image)
+                    continue
+
             host_ip_match = _COMPOSE_LONG_HOST_IP.match(line)
             if host_ip_match:
                 pending_host_ip = host_ip_match.group("host_ip")
+                continue
+
+            if not in_ports_block:
+                # Under `expose:`, a port is opened to the compose network only.
+                # Reporting those as published would flag every internal
+                # database link in every stack.
                 continue
 
             published = _COMPOSE_LONG_PUBLISHED.match(line)
@@ -200,6 +234,40 @@ class ExposureScanner(Scanner):
             )
             yield self._service_finding(source, index + 1, line, service_info,
                                         origin="a compose port mapping")
+
+    def _short_form_finding(self, source: SourceFile, line_no: int, line: str,
+                            container_port: int, service_name: str, image: str) -> Finding:
+        """`- 80` under `ports:` - published on a random host port, all interfaces."""
+        service = Service(port=0, host_ip="0.0.0.0", container_port=container_port,
+                          name=service_name, image=image)
+        label = service.service_label
+        critical = service.is_critical
+        return self.make_finding(
+            rule_id="expose.published-ephemeral",
+            title=(f"{label} published on a random host port"
+                   if label != "service" else
+                   f"Container port {container_port} published on a random host port"),
+            source=source, line=line_no, snippet=line.strip(),
+            severity="critical" if critical else "medium",
+            confidence="high",
+            description=(
+                f"A `ports:` entry with only a container port publishes it anyway - Docker picks "
+                f"a free host port and binds it to 0.0.0.0. It reads like a declaration that the "
+                f"container listens on {container_port}, which is what `expose:` does; `ports:` "
+                f"makes it reachable from every interface the host has."
+                + (f" {label} is a data store or control plane." if critical else "")
+            ),
+            remediation=(
+                "Keep the random port and confine it to loopback by giving the host side an "
+                f"address and no port: `- \"127.0.0.1::{container_port}\"`. If nothing outside "
+                f"the compose network needs it, use `expose:` instead - services reach each other "
+                f"by name on {container_port} without publishing anything."
+            ),
+            cwe=["CWE-668"], owasp=["A05:2021 Security Misconfiguration"],
+            tags=["exposure", "docker"] + (["datastore"] if critical else []),
+            scanner=self.name,
+            salt=str(container_port),
+        )
 
     # -- kubernetes ----------------------------------------------------------
     def _kubernetes(self, source: SourceFile, lines: Sequence[str]) -> Iterator[Finding]:

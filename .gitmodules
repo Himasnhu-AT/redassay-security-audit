@@ -1,0 +1,3 @@
+[submodule "benchmarks/validation-benchmarks"]
+	path = benchmarks/validation-benchmarks
+	url = https://github.com/Himasnhu-AT/validation-benchmarks.git
