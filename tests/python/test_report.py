@@ -166,3 +166,59 @@ class QuickfixTest(unittest.TestCase):
     def test_it_is_single_line_per_finding(self):
         finding = make_finding(description="a\nmultiline\ndescription")
         self.assertEqual(len(report.quickfix([finding]).splitlines()), 1)
+
+
+class ExposureReportTest(unittest.TestCase):
+    def _published(self, **overrides):
+        data = {
+            "rule_id": "expose.published-datastore",
+            "title": "PostgreSQL published on port 5432",
+            "severity": "critical",
+            "tags": ["exposure", "docker", "datastore"],
+            "location": Location(path="docker-compose.yml", line=18, snippet='- "5432:5432"'),
+        }
+        data.update(overrides)
+        return make_finding(**data)
+
+    def test_an_empty_report_says_so_plainly(self):
+        text = report.exposure([])
+        self.assertIn("No published services", text)
+
+    def test_findings_without_the_exposure_tag_are_ignored(self):
+        other = make_finding(rule_id="py.sql-dynamic", tags=["injection"])
+        self.assertIn("No published services", report.exposure([other]))
+
+    def test_data_stores_get_their_own_section_first(self):
+        text = report.exposure([
+            self._published(),
+            self._published(rule_id="expose.published-port", title="Port 8080 published",
+                            severity="medium", tags=["exposure", "docker"],
+                            location=Location(path="docker-compose.yml", line=7, snippet='- "8080:80"')),
+        ])
+        self.assertLess(text.index("Data stores reachable"), text.index("Other published surfaces"))
+
+    def test_the_snippet_is_a_code_span_not_a_nested_bullet(self):
+        text = report.exposure([self._published()])
+        self.assertIn('`- "5432:5432"`', text)
+        self.assertNotIn('  - - "5432:5432"', text)
+
+    def test_it_counts_by_severity(self):
+        text = report.exposure([self._published(), self._published(
+            rule_id="expose.published-port", severity="medium",
+            location=Location(path="a.yml", line=2, snippet="x"))])
+        self.assertIn("1 critical", text)
+        self.assertIn("1 medium", text)
+
+    def test_it_ends_with_the_remediation_ladder(self):
+        text = report.exposure([self._published()])
+        self.assertIn("How to close them", text)
+        self.assertIn("127.0.0.1:5432:5432", text)
+
+    def test_worst_first_within_a_section(self):
+        text = report.exposure([
+            self._published(rule_id="expose.k8s-host-port", title="hostPort", severity="medium",
+                            tags=["exposure"], location=Location(path="a.yml", line=1, snippet="x")),
+            self._published(rule_id="expose.open-cidr", title="Open CIDR", severity="critical",
+                            tags=["exposure"], location=Location(path="b.tf", line=1, snippet="y")),
+        ])
+        self.assertLess(text.index("Open CIDR"), text.index("hostPort"))
