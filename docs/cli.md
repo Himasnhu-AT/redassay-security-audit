@@ -271,7 +271,14 @@ redassay report --format markdown -o SECURITY-AUDIT.md
 redassay report --format sarif -o redassay.sarif
 redassay report --format json
 redassay report --format quickfix
+redassay report --format exposure
 ```
+
+`exposure` answers one question - what does this repository publish? - grouped
+by what is behind the port rather than by file, because the decision is per
+service and the same wherever the mapping happens to be written. Data stores
+come first, since most ship with authentication disabled for local development
+and the port *is* the access control.
 
 `quickfix` emits `path:line:col: severity: message [rule]` - the convention every
 editor already knows how to jump through:

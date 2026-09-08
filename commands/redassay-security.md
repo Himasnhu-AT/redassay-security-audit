@@ -233,7 +233,22 @@ fix run is the most important thing on the screen.
 ```bash
 $REDASSAY report --format markdown -o SECURITY-AUDIT.md
 $REDASSAY report --format sarif -o redassay.sarif
+$REDASSAY report --format exposure -o EXPOSED-SERVICES.md
 ```
+
+### `exposure`
+When the question is "what can be reached from outside", not "what code is
+unsafe":
+
+```bash
+$REDASSAY scan --scanner exposure --quiet
+$REDASSAY report --format exposure
+```
+
+Fix in the order the report gives: drop host mappings first, bind loopback where
+local access is genuinely needed, put an authenticating proxy in front of
+anything that must stay public, and scope every CIDR. Re-scan after each batch -
+`expose.*` findings verify cleanly because the evidence is the mapping itself.
 
 ### `doctor`
 ```bash
