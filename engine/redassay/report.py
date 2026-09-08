@@ -158,6 +158,66 @@ def markdown(findings: Sequence[Finding], title: str = "Security audit", repo: s
     return "\n".join(out)
 
 
+def exposure(findings: Sequence[Finding]) -> str:
+    """A report answering one question: what does this repository publish?
+
+    Grouped by what is behind the port rather than by file, because the decision
+    a reader makes is per service - "should Redis be reachable from outside" -
+    and that decision is the same wherever the mapping happens to be written.
+    """
+    published = [f for f in findings if "exposure" in f.tags]
+    if not published:
+        return "No published services found.\n\nNothing in this repository binds a port to an address it does not control."
+
+    out: List[str] = ["# Exposed services", ""]
+    counts: Dict[str, int] = {}
+    for finding in published:
+        counts[finding.severity] = counts.get(finding.severity, 0) + 1
+    out.append(" · ".join(f"{counts[name]} {name}" for name in sev.ORDER if counts.get(name)))
+    out.append("")
+
+    datastores = [f for f in published if "datastore" in f.tags]
+    if datastores:
+        out.append("## Data stores reachable from outside")
+        out.append("")
+        out.append("These are the ones to fix first. Most ship with authentication disabled "
+                   "for local development, so the port *is* the access control.")
+        out.append("")
+        for finding in sort_by_severity(datastores):
+            out.append(f"- **{finding.title}** — `{finding.location.label}`")
+            # Compose mappings start with "- ", which would nest as a second
+            # bullet. A code span keeps it readable as what it is: a line.
+            snippet = finding.location.snippet.strip()
+            if snippet:
+                out.append(f"  `{snippet}`")
+        out.append("")
+
+    rest = [f for f in published if "datastore" not in f.tags]
+    if rest:
+        out.append("## Other published surfaces")
+        out.append("")
+        for finding in sort_by_severity(rest):
+            out.append(f"- `{finding.severity}` {finding.title} — `{finding.location.label}`")
+        out.append("")
+
+    out.append("## How to close them")
+    out.append("")
+    out.append("In order of how much they buy you:")
+    out.append("")
+    out.append("1. **Drop the host mapping.** Services on the same network reach each other "
+               "by name; publishing to the host is usually left over from debugging.")
+    out.append("2. **Bind loopback where you need local access.** "
+               '`"127.0.0.1:5432:5432"` instead of `"5432:5432"`.')
+    out.append("3. **Put an authenticating proxy in front of anything that must be public.** "
+               "Not the service itself.")
+    out.append("4. **Scope every CIDR.** `0.0.0.0/0` means every address on the internet.")
+    return "\n".join(out)
+
+
+def sort_by_severity(findings: Sequence[Finding]) -> List[Finding]:
+    return sorted(findings, key=lambda f: (sev.rank(f.severity), f.path, f.line))
+
+
 def quickfix(findings: Sequence[Finding]) -> str:
     """`path:line:col: severity: message [rule]` - the grep/compiler convention.
 

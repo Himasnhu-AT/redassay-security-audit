@@ -418,6 +418,8 @@ def cmd_report(args: argparse.Namespace) -> int:
         body = report_mod.markdown(findings, title=args.title, repo=os.path.basename(store.root))
     elif args.format == "sarif":
         body = sarif_mod.dumps(findings, tool_version=__version__)
+    elif args.format == "exposure":
+        body = report_mod.exposure(findings)
     elif args.format == "quickfix":
         body = report_mod.quickfix(findings)
     elif args.format == "json":
@@ -1009,7 +1011,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("report", help="write a report", parents=[common])
     p.add_argument("--format", default="markdown",
-                   choices=["markdown", "json", "sarif", "terminal", "quickfix"])
+                   choices=["markdown", "json", "sarif", "terminal", "quickfix", "exposure"])
     p.add_argument("--output", "-o", default=None)
     p.add_argument("--title", default="Security audit")
     p.add_argument("--status", action="append", choices=models.STATUSES)
