@@ -182,6 +182,40 @@ class ExposureTest(unittest.TestCase):
                        if f.rule_id == "expose.published-datastore")
         self.assertIn("127.0.0.1:5432:5432", finding.remediation)
 
+    # -- compose short form and expose --------------------------------------
+    def test_the_short_form_publishes_too(self):
+        """`- 80` under ports: reads like a declaration and is a publication."""
+        content = "services:\n  app:\n    build: ./app\n    ports:\n      - 80\n"
+        self.assertIn("expose.published-ephemeral", self._rules("docker-compose.yml", content, "compose"))
+
+    def test_the_quoted_short_form(self):
+        content = 'services:\n  cache:\n    image: redis:7\n    ports:\n      - "6379"\n'
+        finding = self._scan("docker-compose.yml", content, "compose")[0]
+        self.assertEqual(finding.rule_id, "expose.published-ephemeral")
+        self.assertEqual(finding.severity, "critical")
+        self.assertIn("Redis", finding.title)
+
+    def test_expose_is_not_publication(self):
+        """`expose:` opens a port to the compose network only. Conflating it with
+        `ports:` would flag every internal database link in every stack."""
+        content = "services:\n  db:\n    build: ./mysql\n    expose:\n      - 3306:3306\n"
+        self.assertEqual(self._rules("docker-compose.yml", content, "compose"), set())
+
+    def test_expose_then_ports_are_tracked_separately(self):
+        content = (
+            "services:\n"
+            "  db:\n    build: ./mysql\n    expose:\n      - 3306\n"
+            "  app:\n    build: ./app\n    ports:\n      - 8080\n"
+        )
+        findings = self._scan("docker-compose.yml", content, "compose")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].line, 9)
+
+    def test_the_remediation_shows_the_loopback_short_form(self):
+        content = "services:\n  app:\n    ports:\n      - 80\n"
+        finding = self._scan("docker-compose.yml", content, "compose")[0]
+        self.assertIn('127.0.0.1::80', finding.remediation)
+
     # -- kubernetes ------------------------------------------------------
     def test_loadbalancer_service(self):
         content = "apiVersion: v1\nkind: Service\nspec:\n  type: LoadBalancer\n"
