@@ -196,8 +196,23 @@ def exposure(findings: Sequence[Finding]) -> str:
     if rest:
         out.append("## Other published surfaces")
         out.append("")
-        for finding in sort_by_severity(rest):
-            out.append(f"- `{finding.severity}` {finding.title} — `{finding.location.label}`")
+        # A monorepo of many services produces hundreds of lines. Grouping by
+        # the directory that owns the file keeps it navigable, because that is
+        # the unit someone actually goes and edits.
+        groups = _group_by_owner(rest)
+        if len(groups) > 8:
+            out.append(f"Across {len(groups)} directories. One line per directory; "
+                       "run `redassay list --path <dir>` for the detail.")
+            out.append("")
+            out.append("| Directory | Published | Worst |")
+            out.append("| --- | --- | --- |")
+            for owner, items in sorted(groups.items(), key=lambda kv: (sev.rank(
+                    min((f.severity for f in kv[1]), key=sev.rank)), kv[0])):
+                worst = min((f.severity for f in items), key=sev.rank)
+                out.append(f"| `{owner}` | {len(items)} | {worst} |")
+        else:
+            for finding in sort_by_severity(rest):
+                out.append(f"- `{finding.severity}` {finding.title} — `{finding.location.label}`")
         out.append("")
 
     out.append("## How to close them")
@@ -212,6 +227,16 @@ def exposure(findings: Sequence[Finding]) -> str:
                "Not the service itself.")
     out.append("4. **Scope every CIDR.** `0.0.0.0/0` means every address on the internet.")
     return "\n".join(out)
+
+
+def _group_by_owner(findings: Sequence[Finding], depth: int = 2) -> Dict[str, List[Finding]]:
+    """Group by the directory a reader would go and edit."""
+    groups: Dict[str, List[Finding]] = {}
+    for finding in findings:
+        parts = finding.path.split("/")
+        owner = "/".join(parts[:depth]) if len(parts) > depth else (parts[0] if parts else ".")
+        groups.setdefault(owner, []).append(finding)
+    return groups
 
 
 def sort_by_severity(findings: Sequence[Finding]) -> List[Finding]:
