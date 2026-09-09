@@ -215,6 +215,20 @@ Roughly 1.5-3 MB/s: a 250-file project in under a second, 5,375 files in around 
 work - and two optimizations that looked obvious and measured *slower* are
 written up alongside it in [`docs/performance.md`](docs/performance.md).
 
+## Scanning something large
+
+`benchmarks/` holds a submodule of 104 deliberately vulnerable applications -
+a corpus for measuring detection and for exercising the exposure work. It is
+optional; nothing in redassay needs it.
+
+```bash
+git submodule update --init --depth 1 benchmarks/validation-benchmarks
+redassay --root benchmarks/validation-benchmarks report --format exposure
+```
+
+See [`benchmarks/README.md`](benchmarks/README.md) for what was changed there
+and why.
+
 ## Running the tests
 
 ```bash
