@@ -99,6 +99,7 @@ def _arguments_after_path(remainder: str, limit: int = 400) -> int:
 #: Markers that say a route is deliberately public. Worth distinguishing from
 #: "nothing found" - one is a decision, the other is a gap.
 PUBLIC_MARKERS = re.compile(
+    # redassay: ignore config.csrf-disabled - this is the pattern that detects it
     r"(?i)(@Public\b|AllowAny|permitAll|csrf_exempt|public\s*[:=]\s*true|"
     r"skip_before_action|@AnonymousAllowed|login_not_required)"
 )

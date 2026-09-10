@@ -206,6 +206,7 @@ CATALOGUE: Dict[str, Tech] = {
         "django", "Django", "python",
         entry_hint="urls.py patterns, views.py",
         notes=(
+            # redassay: ignore config.csrf-disabled - guidance text, not configuration
             "@csrf_exempt on a state-changing view removes the only thing standing "
             "between it and a cross-site POST.",
             ".raw() and .extra() do not escape interpolated values; only params= binds.",
