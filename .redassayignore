@@ -13,3 +13,9 @@ tests/
 
 # Deliberately vulnerable applications, used to prove detection still works.
 fixtures/
+
+# The benchmarks submodule: 104 deliberately vulnerable applications, present as
+# a corpus to scan deliberately rather than something to audit on every
+# self-scan. Point redassay at it explicitly:
+#   redassay --root benchmarks/validation-benchmarks scan
+benchmarks/
