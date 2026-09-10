@@ -202,3 +202,38 @@ class GeneratedDocsTest(unittest.TestCase):
             capture_output=True, text=True, cwd=_bootstrap.ROOT, check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+class InsideStringSpanTest(unittest.TestCase):
+    """A pattern that includes the surrounding quotes starts *at* the quote, not
+    inside it - so testing only the first character let it read as code."""
+
+    def _spans(self, line):
+        from redassay.scanners.pattern import string_spans
+        return string_spans(line)
+
+    def test_a_match_that_includes_the_quotes_is_still_inside(self):
+        from redassay.scanners.pattern import inside_string
+        line = 'sample = "0.0.0.0:8080:80"'
+        spans = self._spans(line)
+        start = line.index('"')
+        end = line.index('"', start + 1) + 1
+        self.assertTrue(inside_string(spans, start, end))
+
+    def test_a_match_outside_every_span_is_not_inside(self):
+        from redassay.scanners.pattern import inside_string
+        line = 'host = "x"  # 0.0.0.0'
+        spans = self._spans(line)
+        index = line.rindex("0.0.0.0")
+        self.assertFalse(inside_string(spans, index, index + 7))
+
+    def test_a_match_spanning_out_of_a_string_is_not_inside(self):
+        from redassay.scanners.pattern import inside_string
+        line = 'a = "abc" + danger'
+        spans = self._spans(line)
+        self.assertFalse(inside_string(spans, 5, len(line)))
+
+    def test_the_single_index_form_still_works(self):
+        from redassay.scanners.pattern import inside_string
+        line = 'msg = "eval(x)"'
+        self.assertTrue(inside_string(self._spans(line), line.index("eval")))
