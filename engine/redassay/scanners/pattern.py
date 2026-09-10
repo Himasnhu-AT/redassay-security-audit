@@ -104,8 +104,20 @@ def string_spans(line: str) -> List[Tuple[int, int]]:
     return [(m.start(), m.end()) for m in _STRING_SPAN.finditer(line)]
 
 
-def inside_string(spans: Sequence[Tuple[int, int]], index: int) -> bool:
-    return any(start < index < end - 1 for start, end in spans)
+def inside_string(spans: Sequence[Tuple[int, int]], index: int, end_index: Optional[int] = None) -> bool:
+    """Does a match lie within a string literal?
+
+    Testing only the match's first character is not enough: a pattern written to
+    include the surrounding quotes - `["\']?0\.0\.0\.0` - starts *at* the quote
+    rather than inside it, and so read as code. Compare the whole span instead.
+    """
+    if end_index is None:
+        end_index = index + 1
+    for start, stop in spans:
+        interior_start, interior_end = start, stop - 1
+        if index >= interior_start and end_index <= interior_end + 1:
+            return True
+    return False
 
 
 MARKUP_LANGUAGES = {"html", "markdown", "vue", "svelte", "xml"}
@@ -273,7 +285,7 @@ class PatternScanner(Scanner):
                         continue
                     if spans is None:
                         spans = string_spans(line)
-                    if inside_string(spans, match.start()):
+                    if inside_string(spans, match.start(), match.end()):
                         continue
                 if rule.nearby or rule.nearby_absent:
                     neighbourhood = _window(neighbours, index, rule.nearby_window)
