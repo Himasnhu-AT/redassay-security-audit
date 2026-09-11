@@ -573,6 +573,84 @@ _AUTH_COLOR = {
 }
 
 
+def cmd_trace(args: argparse.Namespace) -> int:
+    """Can a request actually get to this finding?
+
+    Severity says how bad a defect is if someone reaches it. Nothing in the
+    scanners says whether anyone can. Two findings with the same rule and the
+    same severity - one three hops from an unauthenticated POST, one in a helper
+    nothing calls - are not the same finding, and this is the only thing that
+    tells them apart.
+    """
+    from . import surface as surface_mod, tech as tech_mod
+    from .callgraph import CallGraph
+    from .walker import WalkOptions, collect
+
+    store = _require_store(args.root)
+    if store is None:
+        return EXIT_ERROR
+
+    config = config_mod.load(args.root)
+    graph = CallGraph(config.root)
+    if not graph.enabled and not args.json:
+        _err(f"note: {graph.reason}")
+
+    files = collect(config.root, WalkOptions(respect_gitignore=config.respect_gitignore))
+    entries = surface_mod.inventory(files, tech_mod.detect(files))
+
+    if args.id:
+        finding = store.get(args.id)
+        if finding is None:
+            _err(f"no finding matching '{args.id}'")
+            return EXIT_ERROR
+        targets = [finding]
+    else:
+        targets = store.query(status=list(models.ACTIONABLE),
+                              severity_floor=args.min_severity)[: args.limit]
+
+    results = []
+    for finding in targets:
+        reach = graph.reaches(finding.path, finding.line, entries)
+        results.append((finding, reach))
+        if args.annotate:
+            tag = f"reach:{reach.status}"
+            finding.tags = sorted(set(finding.tags) | {tag})
+            store.put(finding)
+
+    if args.annotate:
+        store.save()
+
+    if args.json:
+        _emit_json({
+            "graph": graph.stats(),
+            "entry_points": len(entries),
+            "findings": [
+                {**finding.to_dict(), "reachability": reach.to_dict()}
+                for finding, reach in results
+            ],
+        })
+        return EXIT_OK
+
+    order = {"reachable": 0, "unknown": 1, "no-path": 2}
+    for finding, reach in sorted(results, key=lambda pair: (order.get(pair[1].status, 1),
+                                                            sev.rank(pair[0].severity))):
+        mark = {"reachable": "!", "no-path": ".", "unknown": "?"}.get(reach.status, "?")
+        _out(f"  {mark} {finding.severity:<8} {finding.rule_id:<26} {finding.location.label}")
+        _out(f"      {reach.describe()}")
+    _out("")
+    counts: Dict[str, int] = {}
+    for _, reach in results:
+        counts[reach.status] = counts.get(reach.status, 0) + 1
+    _out("  ".join(f"{count} {status}" for status, count in sorted(counts.items())))
+    if counts.get("reachable"):
+        _out("")
+        _out("`!` means a call path exists from an entry point. Start there.")
+    if counts.get("no-path"):
+        _out("`.` means this graph has no path - not that none exists. Dynamic")
+        _out("    dispatch, reflection and framework magic are invisible to it.")
+    return EXIT_OK
+
+
 def cmd_history(args: argparse.Namespace) -> int:
     """Scan-over-scan trend. Answers "is this getting better or worse"."""
     store = _require_store(args.root)
@@ -1049,6 +1127,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--exclude-tests", action="store_true")
     p.add_argument("--limit", type=int, default=60)
     p.set_defaults(func=cmd_surface)
+
+    p = sub.add_parser("trace", help="can a request reach this finding?", parents=[common])
+    p.add_argument("id", nargs="?", default=None, help="one finding; omit for the worst N")
+    p.add_argument("--min-severity", default="high", choices=sev.ORDER)
+    p.add_argument("--limit", type=int, default=25)
+    p.add_argument("--annotate", action="store_true",
+                   help="record the result as a reach:* tag on each finding")
+    p.set_defaults(func=cmd_trace)
 
     p = sub.add_parser("history", help="scan-over-scan trend", parents=[common])
     p.add_argument("--limit", type=int, default=20)
