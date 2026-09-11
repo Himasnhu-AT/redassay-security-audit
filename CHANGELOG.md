@@ -15,6 +15,21 @@ First release.
 - An append-only action queue between the board and the agent, so nothing edits
   code until a human approves a specific finding.
 
+### Knowing what to look at
+
+- `redassay surface` inventories the entry points an attacker can reach - HTTP
+  routes, server actions, queue consumers, socket handlers, webhooks, scheduled
+  jobs - and records what stands in front of each one. This is the artifact the
+  audit now starts from, replacing a set of greps whose completeness nobody
+  could check.
+- Framework detection from sentinel files and manifests, with short, specific
+  notes on the mistakes each framework invites.
+- An exposure scanner answering the question that comes before "is this code
+  safe": what does this repository publish to a network it does not control -
+  compose port mappings, Kubernetes Services, open CIDRs, wildcard binds.
+- `redassay report --format exposure` groups those by what is behind the port
+  rather than by file, because the decision is per service.
+
 ### Detection
 
 - 115 rules across 12 packs: injection, XSS, deserialization, crypto,
@@ -67,7 +82,7 @@ First release.
   scanner by the test suite. Introducing this found seven silently broken rules,
   including five whose literal matcher could never match a quote inside a
   differently-quoted string - so the most-used SQL rule missed `WHERE name = '"`.
-- 699 Python tests and 75 JavaScript tests, neither needing an install.
+- 813 Python tests and 75 JavaScript tests, neither needing an install.
 - A control fixture of safe code that must produce zero high-confidence
   findings, and a regression suite built from false positives that real
   repositories produced.

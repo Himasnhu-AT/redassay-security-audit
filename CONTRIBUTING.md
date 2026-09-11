@@ -72,7 +72,7 @@ can do.
 
 ## Tests
 
-- Python: `unittest`, no pytest. 699 tests, no dependencies.
+- Python: `unittest`, no pytest. 813 tests, no dependencies.
 - JavaScript: `node:test`. 75 tests over the board's modules.
 - Both: `bash scripts/run-tests.sh`
 
