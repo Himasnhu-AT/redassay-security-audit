@@ -144,6 +144,48 @@ Framework detection drives the whole thing, so `redassay surface --json`
 includes the detected stack and, for known frameworks, the specific mistakes
 that framework invites.
 
+### `trace`
+
+```bash
+redassay trace                    # the worst findings, ranked by reachability
+redassay trace a5843742b96a       # one finding
+redassay trace --annotate         # record reach:* tags on each finding
+```
+
+Answers the question severity cannot: **can a request actually get to this
+line?**
+
+```
+  ! high  py.shell-dynamic  app/db.py:7
+      reachable from POST /report in 1 hop(s): report -> run_report
+  . high  py.shell-dynamic  app/db.py:12
+      no call path from any known entry point
+```
+
+Same rule, same severity, same file - and the first one is the only one worth
+anyone's afternoon. Nothing in the scanners can tell them apart, because the
+difference is a call edge two files away.
+
+| Mark | Meaning |
+| --- | --- |
+| `!` | a call path exists from an entry point |
+| `.` | this graph found no path |
+| `?` | the graph has nothing to say about this symbol |
+
+**`.` is not "unreachable".** Dynamic dispatch, reflection, framework
+registration and anything built at runtime are invisible to a static call
+graph. It means *this graph* has no edge - which is a reason to look later, not
+a reason not to look.
+
+Requires an external call graph. redassay does not build one: `architecture.md`
+explains why a half-built call graph is worse than none. If one already exists
+it is used; if not, `trace` says so and everything else works unchanged. Build
+one with:
+
+```bash
+graft build      # indexes the repo; no API key needed for the wiring graph
+```
+
 ### `history`
 
 ```bash

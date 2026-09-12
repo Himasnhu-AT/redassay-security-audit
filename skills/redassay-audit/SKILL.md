@@ -57,6 +57,24 @@ For each entry point, answer three questions:
    PNG." "This user already passed the earlier check." Each assumption is a
    candidate finding.
 
+## Rank by reachability before you read anything
+
+```bash
+$REDASSAY trace --min-severity high
+```
+
+Severity says how bad a defect is *if* someone reaches it. It says nothing about
+whether anyone can, and in a real repository most findings sit in code no
+request touches - helpers, migrations, dead branches, vendored copies.
+
+`!` findings have a call path from an entry point. Read those first. `.` and `?`
+findings are not dismissed, only deferred: a static call graph cannot see
+dynamic dispatch, reflection or framework registration, so "no path found" is a
+statement about the graph, not about the code.
+
+If the command reports no graph, everything below still applies - you just do
+the ordering by hand.
+
 ## The classes worth hunting
 
 These are the ones that pay for the reading time, roughly in order.
