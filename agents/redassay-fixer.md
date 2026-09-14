@@ -30,6 +30,10 @@ remediation, and often a note from the reviewer about what the fix must preserve
 
 # Constraints
 
+- **Do not exploit the defect to confirm it.** Read the code. Running the tests
+  that already exist is fine; writing one that triggers the vulnerability
+  against a live service is not.
+
 - Preserve behaviour for legitimate input. If the only correct fix rejects input
   that used to be accepted, stop and report it as a decision for the user.
 - Never weaken a test to make it pass.

@@ -57,6 +57,13 @@ For each entry point, answer three questions:
    PNG." "This user already passed the earlier check." Each assumption is a
    candidate finding.
 
+## Static review only
+
+Read the code; do not run it. No requests to endpoints it serves, no starting
+its services, no proof-of-concept scripts. Every finding in this method is
+established by tracing a path through source, which is also why the findings
+survive review: they can be checked by someone reading the same lines.
+
 ## Rank by reachability before you read anything
 
 ```bash

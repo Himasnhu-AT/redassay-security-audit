@@ -76,6 +76,24 @@ class CommandTest(unittest.TestCase):
         self.assertIn("Never write a credential", self.body)
 
 
+class SafetyConstraintTest(unittest.TestCase):
+    """An agent with Bash that is told to find vulnerabilities needs to be told,
+    in the same breath, not to trigger them."""
+
+    def test_the_analyst_is_told_not_to_run_the_code(self):
+        _, body = parse_frontmatter(read("agents", "redassay-analyst.md"))
+        self.assertIn("Static review only", body)
+        self.assertIn("not for execution", body)
+
+    def test_the_fixer_is_told_not_to_exploit_to_confirm(self):
+        _, body = parse_frontmatter(read("agents", "redassay-fixer.md"))
+        self.assertIn("Do not exploit the defect", body)
+
+    def test_the_audit_skill_says_it_too(self):
+        _, body = parse_frontmatter(read("skills", "redassay-audit", "SKILL.md"))
+        self.assertIn("Static review only", body)
+
+
 class SkillTest(unittest.TestCase):
     EXPECTED = {"redassay-audit", "redassay-remediate", "redassay-triage"}
 
