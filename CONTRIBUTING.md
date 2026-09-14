@@ -13,6 +13,15 @@ No install step. If any of that needs one, that is a bug.
 `python3 engine/redassay_cli.py doctor` answers most "why is this not working"
 questions directly.
 
+Optional, for reachability:
+
+```bash
+npm install -g @nanonets/graft && graft build
+```
+
+Nothing requires it. `redassay trace` says so and everything else is unaffected
+- see [docs/reachability.md](docs/reachability.md).
+
 ## The rules this project holds itself to
 
 **The engine imports nothing outside the standard library.** Enforced by

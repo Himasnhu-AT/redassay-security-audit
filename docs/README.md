@@ -14,6 +14,9 @@ Start with the root [README](../README.md); this is the map of everything else.
 
 - [**writing-rules.md**](writing-rules.md) - the rule format, the three guards
   that make regex SAST usable, and how to test a rule properly.
+- [**reachability.md**](reachability.md) - why "can a request get here" is a
+  different question from "how bad is this", and how the optional call-graph
+  bridge answers it.
 - [**rules.md**](rules.md) - the full catalogue. Generated from the packs by
   `tools/generate_rule_docs.py`; do not edit by hand.
 
