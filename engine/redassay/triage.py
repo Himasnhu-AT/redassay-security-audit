@@ -22,6 +22,7 @@ from .models import Finding
 SCANNER_PRECEDENCE = {
     "python-ast": 100,
     "javascript": 90,
+    "php-taint": 88,
     "dependencies": 85,
     "cicd": 80,
     "secrets": 75,
@@ -103,6 +104,19 @@ EQUIVALENT = {
 
     "php.file-inclusion-superglobal": "file-inclusion",
     "code.php-eval-include": "file-inclusion",
+    "php.taint-file-inclusion": "file-inclusion",
+
+    "php.taint-sql": "sql-injection",
+    "php.taint-command": "command-injection",
+    "php.taint-eval": "dynamic-eval",
+    "php.taint-file-read": "path-traversal",
+    "php.taint-header": "open-redirect",
+
+    "php.taint-xss": "xss-reflected",
+    "xss.php-echo-request": "xss-reflected",
+
+    "php.taint-unserialize": "unsafe-php-deser",
+    "deser.php-unserialize": "unsafe-php-deser",
 
     "api.mass-assignment-spread": "mass-assignment",
     "ruby.mass-assignment": "mass-assignment",
