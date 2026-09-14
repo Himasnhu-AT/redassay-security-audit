@@ -104,6 +104,15 @@ view of the source, with file scope instead of function scope. That
 over-approximates, which is the right trade for Express handlers where the
 binding and the sink are almost always in the same closure.
 
+The PHP scanner extends the same idea to a template language. PHP interleaves
+code and HTML, so its normalizer is region-aware: string and comment blanking
+happens only inside `<?php ... ?>`, and an HTML attribute quote around a `<?= $x ?>`
+is left intact so the sink inside it stays visible. It knows the request-derived
+`$_SERVER` keys from the safe ones, distinguishes `$_FILES` name from tmp_name,
+and recognises the framework escapers (`esc_html`, `e()`) that real PHP relies
+on. File-scope taint breaks down on very large framework files, so vendored CMS
+cores are excluded at the walker rather than analyzed.
+
 ## The board
 
 `http.server` on loopback. No framework, no build step, no bundler — the UI is

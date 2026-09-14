@@ -115,6 +115,37 @@ a plain `(req, res) =>` handler as middleware.
 The Django result is accurate rather than noisy: that application genuinely has
 no authorization decorators, which is what it is for.
 
+## PHP taint tracking, measured against a manual reviewer
+
+The PHP scanner exists because of a measured miss. A head-to-head on one
+deliberately-vulnerable PHP app pitted redassay-assisted review against a manual
+one; both found the intended file-inclusion-to-RCE chain, but the tool-assisted
+run missed a reflected XSS because the old PHP rules matched a superglobal only
+on the echo line, and here the value reached the echo through a variable:
+
+```php
+$name = trim($_POST["name"]);
+...
+<input value="<?php echo $name; ?>">   // the miss
+```
+
+The taint scanner now catches all five reflections in that app, matching what
+the human found. Across the whole 104-app corpus it reports 44 findings, of
+which a spot-check found the large majority to be genuine - the residue being
+the framework-internals class below.
+
+Two robustness fixes came out of running it on real code rather than fixtures:
+
+- **Framework escapers.** WordPress's `esc_html`/`esc_url`/`sanitize_*` and
+  Laravel's `e()` are XSS escapers the scanner had to learn, or every correctly
+  escaped line in a CMS reads as a finding.
+- **Vendored cores.** `wp-admin/` and `wp-includes/` are WordPress core - third
+  party code, excluded like `vendor/`. This cut corpus findings from 185 to 44
+  without losing a single one in application or plugin code.
+- **`$_FILES` precision.** Only `['name']` and `['type']` are attacker
+  controlled; `['tmp_name']` is the server's own temp path, and reading it is not
+  a finding.
+
 ## The control fixture
 
 `fixtures/clean-app/` is the other half of the measurement: idiomatic, safe code
