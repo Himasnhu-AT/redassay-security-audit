@@ -82,7 +82,7 @@ First release.
   scanner by the test suite. Introducing this found seven silently broken rules,
   including five whose literal matcher could never match a quote inside a
   differently-quoted string - so the most-used SQL rule missed `WHERE name = '"`.
-- 813 Python tests and 75 JavaScript tests, neither needing an install.
+- 885 Python tests and 75 JavaScript tests, neither needing an install.
 - A control fixture of safe code that must produce zero high-confidence
   findings, and a regression suite built from false positives that real
   repositories produced.

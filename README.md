@@ -122,7 +122,7 @@ Full command reference: [`docs/cli.md`](docs/cli.md).
 
 ## What it detects
 
-115 rules across 12 packs, plus 7 scanners that do more than match text.
+115 rules across 12 packs, plus 8 scanners that do more than match text.
 
 **Injection** — SQL, command, code, template, LDAP, XPath, NoSQL operator
 injection, across Python, JS/TS, Ruby, PHP, Java, Go, C#.
@@ -136,6 +136,14 @@ the value first, and downgrades instead of shouting.
 **The JS/TS scanner** works over a comment- and string-stripped view of the
 source and tracks values bound out of `req.query` / `req.body` / `req.params`
 into shell, SQL, filesystem and HTTP sinks.
+
+**The PHP scanner** does the same for PHP's superglobals — `$_GET`, `$_POST`,
+`$_FILES` and the request-derived `$_SERVER` keys — tracing them through
+variables and concatenation to `echo`, `include`, SQL, shell and file sinks. PHP
+being a template language, its normalizer is region-aware: a `<?= $x ?>` inside
+an HTML attribute keeps its sink visible while the attribute quotes are not
+mistaken for string delimiters. This is the class of bug — request data reaching
+a sink one variable-hop later — that line-oriented rules structurally miss.
 
 **Secrets** — provider tokens (AWS, GitHub, Stripe, OpenAI, Slack, and twenty
 more) at high confidence, plus entropy-gated generic assignments with a
@@ -204,7 +212,7 @@ engine/redassay/   the scanner - stdlib only
   scanners/        pattern, secrets, python-ast, javascript, deps, cicd, configs
   rules/           nine JSON rule packs
   server/          the board: HTTP server, JSON API, static UI
-tests/python/      813 unittest tests
+tests/python/      885 unittest tests
 tests/js/          75 node:test tests for the board's modules
 fixtures/          vulnerable apps, and one clean control app
 ```
