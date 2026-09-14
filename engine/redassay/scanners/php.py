@@ -122,8 +122,10 @@ SERVER_TAINTED = re.compile(
 )
 RAW_INPUT = re.compile(r"php://input|file_get_contents\s*\(\s*['\"]php://input")
 
-#: $name = <rhs>  — capture the variable and everything up to the statement end.
-ASSIGN = re.compile(r"\$(?P<var>[A-Za-z_]\w*)\s*(?:\.=|=)\s*(?P<rhs>[^;{}]+)")
+#: $name = <rhs>  — capture the variable, the operator, and the right-hand side.
+#: The operator matters: `.=` appends (taint carries), `=` overwrites (a constant
+#: right-hand side *kills* any earlier taint on the variable).
+ASSIGN = re.compile(r"\$(?P<var>[A-Za-z_]\w*)\s*(?P<op>\.=|=)\s*(?P<rhs>[^;{}]+)")
 
 #: Functions that fully neutralise a value for every sink (a number is safe
 #: everywhere). If one wraps the source, the variable is not tainted at all.
@@ -162,6 +164,12 @@ class Taint:
     def __init__(self) -> None:
         self.origin: Dict[str, str] = {}
         self.cleaned: Dict[str, Set[str]] = {}
+        #: Per variable, the ordered assignments seen in the file as
+        #: (position, is_tainted, cleaned_categories, origin). Lets a sink ask
+        #: "what was written to this variable *last, before me*" instead of
+        #: trusting the whole-file taint set - so a reassignment to a constant
+        #: kills earlier taint, the way it does at runtime.
+        self.assigns: Dict[str, List[Tuple[int, bool, Set[str], Optional[str]]]] = {}
 
     def _source_in(self, fragment: str) -> Optional[str]:
         match = SUPERGLOBAL.search(fragment)
@@ -217,9 +225,48 @@ class Taint:
             if not changed:
                 break
 
-    def reaches(self, fragment: str, category: str) -> Optional[str]:
+        # Second pass, now that origin/cleaned have converged: record each
+        # assignment in source order with whether it (re)taints the variable.
+        for match in assignments:
+            var, op, rhs = match.group("var"), match.group("op"), match.group("rhs")
+            src = self._source_in(rhs)
+            tainted = bool(src) or any(r in self.origin for r in _var_refs(rhs))
+            if NUMERIC_CLEAN.search(rhs):
+                tainted = False
+            cleaned = {c for c, esc in ESCAPERS.items() if esc.search(rhs)}
+            for ref in _var_refs(rhs):
+                cleaned |= self.cleaned.get(ref, set())
+            origin = src or next(
+                (self.origin[r] for r in _var_refs(rhs) if r in self.origin), None)
+            history = self.assigns.setdefault(var, [])
+            if op == ".=" and history:
+                # Append: taint only grows, and the prior origin is kept when the
+                # appended fragment is itself clean.
+                prev = history[-1]
+                tainted = tainted or prev[1]
+                cleaned = cleaned & prev[2] if tainted else cleaned
+                origin = origin or prev[3]
+            history.append((match.start(), tainted, cleaned, origin))
+
+    def _state_at(self, var: str, pos: Optional[int]) -> Tuple[bool, Set[str], Optional[str]]:
+        """Taint state of `var` as of source position `pos`: the nearest earlier
+        assignment wins, so a reassignment to a constant reads as clean at a sink
+        below it. With no position, or no assignment before the sink, fall back to
+        the whole-file set (the original flow-insensitive behaviour)."""
+        history = self.assigns.get(var)
+        if pos is not None and history:
+            prior = [a for a in history if a[0] < pos]
+            if prior:
+                _, tainted, cleaned, origin = prior[-1]
+                return tainted, cleaned, origin or self.origin.get(var, "$_REQUEST")
+        if var in self.origin:
+            return True, self.cleaned.get(var, set()), self.origin[var]
+        return False, set(), None
+
+    def reaches(self, fragment: str, category: str, pos: Optional[int] = None) -> Optional[str]:
         """The origin of a tainted, not-yet-cleaned-for-`category` value in this
-        fragment, or None."""
+        fragment, or None. `pos` is the sink's position in the file, used to
+        respect a later reassignment that clears the variable."""
         # A category escaper wrapping the sink expression itself neutralises it.
         escaper = ESCAPERS.get(category)
         if escaper and escaper.search(fragment):
@@ -231,7 +278,8 @@ class Taint:
         if source:
             return source
         for var in _var_refs(fragment):
-            if var not in self.origin or category in self.cleaned.get(var, set()):
+            tainted, cleaned, origin = self._state_at(var, pos)
+            if not tainted or category in cleaned:
                 continue
             # `$allow[$var]` is a lookup keyed by the tainted value, and the
             # result is whatever the allowlist holds - not the input. If every
@@ -239,7 +287,7 @@ class Taint:
             # the sink directly.
             without_lookup = re.sub(r"\$\w+\s*\[\s*\$" + re.escape(var) + r"\s*\]", "", fragment)
             if re.search(r"\$" + re.escape(var) + r"\b", without_lookup):
-                return self.origin[var]
+                return origin
         return None
 
 
@@ -287,6 +335,43 @@ SINKS: List[Tuple[str, str, re.Pattern, Dict[str, Any]]] = [
      {"title": "Request data echoed without escaping",
       "severity": "high", "cwe": ["CWE-79"], "owasp": ["A03:2021 Injection"],
       "remediation": "Wrap output with htmlspecialchars($v, ENT_QUOTES, 'UTF-8')."}),
+    # A tainted destination path is arbitrary file write - a dropped webshell, an
+    # overwritten config, or traversal out of the intended directory. Both
+    # arguments of copy/rename/move_uploaded_file/link/symlink are paths, so any
+    # taint in the call is a path issue; file_put_contents/fputs/fwrite take the
+    # path first and the content second, so only the first argument is matched -
+    # user data written to a *fixed* log file is not this bug. Category "path"
+    # means a basename()/realpath()'d destination is treated as cleaned, the same
+    # way the read sink treats it.
+    ("php.taint-file-write", "path",
+     re.compile(r"\b(?:copy|rename|move_uploaded_file|link|symlink)\s*\(\s*(?P<arg>[^;)]{0,240})"),
+     {"title": "File written to a path built from request data",
+      "severity": "high", "cwe": ["CWE-22", "CWE-73"], "owasp": ["A01:2021 Broken Access Control"],
+      "remediation": "Generate the destination name server-side; never build a write path from the "
+                     "client filename. basename() the value and confirm the resolved path stays "
+                     "under the intended directory."}),
+    ("php.taint-file-write", "path",
+     re.compile(r"\b(?:file_put_contents|fputs|fwrite)\s*\(\s*(?P<arg>[^,;)]{0,200})"),
+     {"title": "File written to a path built from request data",
+      "severity": "high", "cwe": ["CWE-22", "CWE-73"], "owasp": ["A01:2021 Broken Access Control"],
+      "remediation": "Generate the destination name server-side; never build a write path from the "
+                     "client filename. basename() the value and confirm the resolved path stays "
+                     "under the intended directory."}),
+    # A tainted callable is arbitrary code execution - the function-pointer
+    # analogue of eval(). Category "command" so no XSS/path/SQL escaper is
+    # mistaken for neutralising it; only an allowlist can.
+    ("php.taint-callable", "command",
+     re.compile(r"\b(?:call_user_func|call_user_func_array)\s*\(\s*(?P<arg>[^,;)]{0,120})"),
+     {"title": "Function called by a name from request data",
+      "severity": "high", "cwe": ["CWE-94"], "owasp": ["A03:2021 Injection"],
+      "remediation": "Map the input to an allowlist of permitted callables; never call a function "
+                     "whose name comes from the request."}),
+    ("php.taint-callable", "command",
+     re.compile(r"(?P<arg>\$[A-Za-z_]\w*)\s*\("),
+     {"title": "Variable function called with a name from request data",
+      "severity": "high", "cwe": ["CWE-94"], "owasp": ["A03:2021 Injection"],
+      "remediation": "Map the input to an allowlist of permitted callables; never call a function "
+                     "whose name comes from the request."}),
 ]
 
 _LABEL = {"$_GET": "$_GET", "$_POST": "$_POST", "$_REQUEST": "$_REQUEST",
@@ -317,7 +402,7 @@ class PhpTaintScanner(Scanner):
         for rule_id, category, pattern, meta in SINKS:
             for match in pattern.finditer(clean):
                 fragment = match.group("arg")
-                origin = taint.reaches(fragment, category)
+                origin = taint.reaches(fragment, category, match.start())
                 if origin is None:
                     continue
                 line_no = clean.count("\n", 0, match.start()) + 1

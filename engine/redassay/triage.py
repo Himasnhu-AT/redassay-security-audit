@@ -109,8 +109,15 @@ EQUIVALENT = {
     "php.taint-sql": "sql-injection",
     "php.taint-command": "command-injection",
     "php.taint-eval": "dynamic-eval",
+    "php.taint-callable": "dynamic-eval",
     "php.taint-file-read": "path-traversal",
     "php.taint-header": "open-redirect",
+
+    # A tainted move_uploaded_file destination is both "unvalidated upload"
+    # (the line rule) and "write to a request-built path" (the taint scanner);
+    # at a shared line they are one defect, and php-taint outranks pattern.
+    "php.taint-file-write": "unrestricted-upload",
+    "php.upload-no-validation": "unrestricted-upload",
 
     "php.taint-xss": "xss-reflected",
     "xss.php-echo-request": "xss-reflected",
