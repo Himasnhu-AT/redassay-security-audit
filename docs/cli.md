@@ -314,7 +314,13 @@ redassay report --format sarif -o redassay.sarif
 redassay report --format json
 redassay report --format quickfix
 redassay report --format exposure
+redassay report --format compliance
 ```
+
+`compliance` maps findings onto NIST CSF 2.0 subcategories and MITRE ATT&CK
+techniques via their CWEs, for the readers who work in that vocabulary. It says
+which controls the findings *touch* - never that a control is satisfied, because
+no scan can establish that.
 
 `exposure` answers one question - what does this repository publish? - grouped
 by what is behind the port rather than by file, because the decision is per
