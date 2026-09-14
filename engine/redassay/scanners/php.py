@@ -128,16 +128,26 @@ ASSIGN = re.compile(r"\$(?P<var>[A-Za-z_]\w*)\s*(?:\.=|=)\s*(?P<rhs>[^;{}]+)")
 #: Functions that fully neutralise a value for every sink (a number is safe
 #: everywhere). If one wraps the source, the variable is not tainted at all.
 NUMERIC_CLEAN = re.compile(
-    r"\b(intval|floatval|abs|count|sizeof|strlen|boolval)\s*\(|\((int|integer|float|double|bool|boolean)\)"
+    r"\b(intval|floatval|absint|abs|count|sizeof|strlen|boolval)\s*\(|\((int|integer|float|double|bool|boolean)\)"
 )
 
 #: Category-specific escapers. A value cleaned for one category is still tainted
 #: for the others (htmlspecialchars stops XSS, not SQL injection).
 ESCAPERS: Dict[str, re.Pattern] = {
-    "xss": re.compile(r"\b(htmlspecialchars|htmlentities|strip_tags|urlencode|rawurlencode|json_encode)\s*\("),
-    "sql": re.compile(r"\b(\w*real_escape_string|pg_escape_\w+|quote)\s*\(|->prepare\s*\("),
+    # Native PHP escapers plus the framework ones that dominate real code -
+    # WordPress `esc_*`/`sanitize_*`/`wp_kses`, Laravel's `e()`. Without these a
+    # scan of any CMS is a wall of false positives on correctly-escaped output.
+    "xss": re.compile(
+        r"\b(htmlspecialchars|htmlentities|strip_tags|urlencode|rawurlencode|json_encode"
+        r"|esc_html|esc_attr|esc_url|esc_url_raw|esc_js|esc_textarea|esc_html__|esc_html_e"
+        r"|esc_attr__|esc_attr_e|sanitize_text_field|sanitize_email|sanitize_key"
+        r"|sanitize_file_name|wp_kses|wp_kses_post|wp_kses_data|tag_escape"
+        r"|filter_var|htmlspecialchars_decode|number_format)\s*\("
+        r"|\be\s*\("                     # Laravel blade escaper
+    ),
+    "sql": re.compile(r"\b(\w*real_escape_string|pg_escape_\w+|quote|esc_sql|prepare)\s*\(|->prepare\s*\("),
     "command": re.compile(r"\b(escapeshellarg|escapeshellcmd)\s*\("),
-    "path": re.compile(r"\bbasename\s*\("),
+    "path": re.compile(r"\b(basename|sanitize_file_name)\s*\("),
 }
 
 
@@ -154,8 +164,18 @@ class Taint:
         self.cleaned: Dict[str, Set[str]] = {}
 
     def _source_in(self, fragment: str) -> Optional[str]:
-        if SUPERGLOBAL.search(fragment):
-            match = SUPERGLOBAL.search(fragment)
+        match = SUPERGLOBAL.search(fragment)
+        if match:
+            if match.group(1) == "FILES":
+                # Only the client-supplied filename and MIME type are attacker
+                # controlled. tmp_name is the server's temp path, and size/error
+                # are set by PHP - reading those is not a taint source.
+                safe_only = re.search(
+                    r"\$_FILES\s*\[[^\]]*\]\s*\[\s*['\"](tmp_name|size|error)['\"]", fragment)
+                controlled = re.search(
+                    r"\$_FILES\s*\[[^\]]*\]\s*\[\s*['\"](name|type)['\"]", fragment)
+                if safe_only and not controlled:
+                    return None
             return f"$_{match.group(1)}"
         if SERVER_TAINTED.search(fragment):
             return "$_SERVER"
