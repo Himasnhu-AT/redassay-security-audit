@@ -82,12 +82,13 @@ class SafetyConstraintTest(unittest.TestCase):
 
     def test_the_analyst_is_told_not_to_run_the_code(self):
         _, body = parse_frontmatter(read("agents", "redassay-analyst.md"))
-        self.assertIn("Static review only", body)
-        self.assertIn("not for execution", body)
+        flat = " ".join(body.split())          # the prose is hard-wrapped
+        self.assertIn("Static review only", flat)
+        self.assertIn("not for execution", flat)
 
     def test_the_fixer_is_told_not_to_exploit_to_confirm(self):
         _, body = parse_frontmatter(read("agents", "redassay-fixer.md"))
-        self.assertIn("Do not exploit the defect", body)
+        self.assertIn("Do not exploit the defect", " ".join(body.split()))
 
     def test_the_audit_skill_says_it_too(self):
         _, body = parse_frontmatter(read("skills", "redassay-audit", "SKILL.md"))
