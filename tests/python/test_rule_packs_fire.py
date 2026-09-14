@@ -67,6 +67,9 @@ class FixtureLabelTest(unittest.TestCase):
             "config.env-secret-value", "config.k8s-inline-secret",
             "config.k8s-no-security-context", "secret.env-file-committed",
             "dep.install-hook-remote-code", "dep.floating-version", "dep.non-registry-source",
+            "php.taint-xss", "php.taint-file-inclusion", "php.taint-sql",
+            "php.taint-command", "php.taint-file-read", "php.taint-unserialize",
+            "php.taint-eval", "php.taint-header",
         }
         for fixture in ("vuln-polyglot", "vuln-flask", "vuln-node"):
             for path, rules in labelled_rules(os.path.join(FIXTURES, fixture)).items():
