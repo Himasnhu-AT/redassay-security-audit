@@ -2,6 +2,11 @@
 
 Start with the root [README](../README.md); this is the map of everything else.
 
+**[Inside redassay](artifact/inside-redassay.html)** is the illustrated version -
+the three questions the system answers, the pipeline, and the decisions behind
+finding identity and reachability, on one page. Published at
+<https://claude.ai/code/artifact/c0d458c3-1d30-464d-b5c6-aba05dd26e25>.
+
 ## Using it
 
 - [**cli.md**](cli.md) - every command and flag, with the CI recipes.

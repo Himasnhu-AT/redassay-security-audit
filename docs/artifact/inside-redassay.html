@@ -1,0 +1,837 @@
+<title>Inside redassay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+/* ── tokens: complete light palette on bare :root ─────────────────── */
+:root {
+  --ground:      #f7f8fa;
+  --surface:     #ffffff;
+  --surface-2:   #eef0f5;
+  --sunken:      #e7eaf1;
+  --line:        #d8dce6;
+  --line-soft:   #e6e9f0;
+
+  --ink:         #1a1d26;
+  --ink-2:       #454b5c;
+  --ink-3:       #6b7285;
+
+  --flow:        #2f6fd0;   /* call edges, data movement */
+  --flow-soft:   #e4edfb;
+
+  --crit:        #c22a44;
+  --high:        #c06a1c;
+  --med:         #9a7a12;
+  --low:         #2d7f9d;
+  --ok:          #1f7a55;
+
+  --shadow: 0 1px 2px rgb(26 29 38 / .05), 0 8px 24px -12px rgb(26 29 38 / .18);
+
+  --display: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --measure: 68ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:    #11141b;
+    --surface:   #171b24;
+    --surface-2: #1d222d;
+    --sunken:    #0d1016;
+    --line:      #2a3140;
+    --line-soft: #222835;
+
+    --ink:       #e6e9ef;
+    --ink-2:     #aeb6c6;
+    --ink-3:     #7b8497;
+
+    --flow:      #6ba3f5;
+    --flow-soft: #182740;
+
+    --crit:      #f2607a;
+    --high:      #f0a15c;
+    --med:       #e3c565;
+    --low:       #74c3dd;
+    --ok:        #5cc79a;
+
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px -14px rgb(0 0 0 / .7);
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground:    #11141b;
+  --surface:   #171b24;
+  --surface-2: #1d222d;
+  --sunken:    #0d1016;
+  --line:      #2a3140;
+  --line-soft: #222835;
+
+  --ink:       #e6e9ef;
+  --ink-2:     #aeb6c6;
+  --ink-3:     #7b8497;
+
+  --flow:      #6ba3f5;
+  --flow-soft: #182740;
+
+  --crit:      #f2607a;
+  --high:      #f0a15c;
+  --med:       #e3c565;
+  --low:       #74c3dd;
+  --ok:        #5cc79a;
+
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px -14px rgb(0 0 0 / .7);
+}
+
+/* ── base ─────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--flow); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--flow);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+code, kbd { font-family: var(--mono); font-size: .84em; }
+:not(pre) > code {
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: .1em .34em;
+  color: var(--ink-2);
+}
+
+/* ── shell ────────────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+}
+
+@media (min-width: 1000px) {
+  .shell { grid-template-columns: 208px minmax(0, 1fr); gap: 56px; }
+}
+
+/* ── rail ─────────────────────────────────────────────────────────── */
+.rail { display: none; }
+
+@media (min-width: 1000px) {
+  .rail {
+    display: block;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    padding-top: 132px;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+}
+
+.rail-label {
+  font-family: var(--display);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 14px;
+}
+
+.rail ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+
+.rail a {
+  display: block;
+  font-family: var(--display);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-decoration: none;
+  padding: 5px 0 5px 13px;
+  border-left: 2px solid var(--line);
+  line-height: 1.35;
+}
+.rail a:hover { color: var(--flow); border-left-color: var(--flow); }
+
+/* ── masthead ─────────────────────────────────────────────────────── */
+.masthead { padding: 108px 0 0; max-width: var(--measure); }
+
+.kicker {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--flow);
+  margin: 0 0 22px;
+}
+
+h1 {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(40px, 6.5vw, 62px);
+  line-height: 1.03;
+  letter-spacing: -.026em;
+  margin: 0 0 24px;
+  text-wrap: balance;
+}
+
+.standfirst {
+  font-size: 20px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.masthead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin-top: 34px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.masthead-meta b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* ── sections ─────────────────────────────────────────────────────── */
+section { max-width: var(--measure); padding-top: 76px; scroll-margin-top: 24px; }
+section.wide { max-width: 100%; }
+
+h2 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -.017em;
+  margin: 0 0 6px;
+  text-wrap: balance;
+}
+
+.sec-note {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-3);
+  margin: 0 0 26px;
+}
+
+h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 17.5px;
+  letter-spacing: -.008em;
+  margin: 36px 0 8px;
+  text-wrap: balance;
+}
+
+p { margin: 0 0 18px; text-wrap: pretty; }
+p:last-child { margin-bottom: 0; }
+
+strong { font-weight: 600; color: var(--ink); }
+
+/* ── the three questions ──────────────────────────────────────────── */
+.questions {
+  display: grid;
+  gap: 16px;
+  margin: 8px 0 4px;
+}
+@media (min-width: 760px) { .questions { grid-template-columns: repeat(3, 1fr); } }
+
+.q {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 22px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow);
+}
+
+.q-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .05em;
+  color: var(--ink-3);
+}
+
+.q-ask {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--ink);
+  margin: 0;
+}
+
+.q-by {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.q-how {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--flow);
+}
+
+/* ── pipeline ─────────────────────────────────────────────────────── */
+.pipeline {
+  display: grid;
+  gap: 0;
+  margin: 4px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 18px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line-soft);
+  align-items: start;
+}
+.stage:last-child { border-bottom: 0; }
+
+.stage-n {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--flow);
+  background: var(--flow-soft);
+  border-radius: 6px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-name {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0 0 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+.stage-file { font-family: var(--mono); font-size: 11.5px; font-weight: 400; color: var(--ink-3); }
+.stage-body { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--ink-2); }
+
+/* ── loop ─────────────────────────────────────────────────────────── */
+.loop {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+@media (min-width: 700px) { .loop { grid-template-columns: repeat(2, 1fr); } }
+
+.actor {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 20px;
+}
+.actor-who {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15px;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.dot-machine { background: var(--flow); }
+.dot-human { background: var(--ok); }
+
+.actor ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
+.actor li { font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+
+.gate {
+  grid-column: 1 / -1;
+  border: 1px solid var(--flow);
+  background: var(--flow-soft);
+  border-radius: 10px;
+  padding: 18px 20px;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.gate b { font-family: var(--display); }
+
+/* ── severity ─────────────────────────────────────────────────────── */
+.sev-scale { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 22px; }
+.sev {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+.s-crit { color: var(--crit); }
+.s-high { color: var(--high); }
+.s-med  { color: var(--med); }
+.s-low  { color: var(--low); }
+
+/* ── code ─────────────────────────────────────────────────────────── */
+.code {
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  padding: 16px 18px;
+  overflow-x: auto;
+  margin: 0 0 20px;
+}
+.code pre { margin: 0; font-family: var(--mono); font-size: 12.8px; line-height: 1.65; color: var(--ink-2); }
+.code .c { color: var(--ink-3); }
+.code .hit { color: var(--crit); }
+.code .good { color: var(--ok); }
+.code .f { color: var(--flow); }
+
+/* ── table ────────────────────────────────────────────────────────── */
+.tw { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 9px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+td { color: var(--ink-2); }
+td:first-child { color: var(--ink); }
+td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ── aside ────────────────────────────────────────────────────────── */
+.aside {
+  border-left: 2px solid var(--line);
+  padding: 2px 0 2px 20px;
+  margin: 0 0 20px;
+  color: var(--ink-2);
+  font-size: 15.5px;
+}
+.aside-label {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* ── honest list ──────────────────────────────────────────────────── */
+.limits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.limits li { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 12px; font-size: 15.5px; line-height: 1.55; color: var(--ink-2); }
+.limits .mk { font-family: var(--mono); color: var(--ink-3); }
+
+footer {
+  max-width: var(--measure);
+  margin-top: 88px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+</style>
+
+<div class="shell">
+
+  <nav class="rail" aria-label="Sections">
+    <p class="rail-label">Contents</p>
+    <ol>
+      <li><a href="#questions">Three questions</a></li>
+      <li><a href="#pipeline">The scan pipeline</a></li>
+      <li><a href="#identity">Finding identity</a></li>
+      <li><a href="#reach">Reachability</a></li>
+      <li><a href="#loop">The review loop</a></li>
+      <li><a href="#deliberate">Deliberate limits</a></li>
+      <li><a href="#numbers">Measured</a></li>
+      <li><a href="#commands">Commands</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <header class="masthead">
+      <p class="kicker">redassay &mdash; a security audit loop for Claude Code</p>
+      <h1>A scanner that stops before it edits your code</h1>
+      <p class="standfirst">
+        Point a language model at a repository and ask for the security bugs and you get
+        a wall of markdown: unreviewable, unrepeatable, and impossible to say
+        <em>no</em> to permanently. redassay splits that into three pieces that talk
+        through files on disk &mdash; and puts a human between finding something and
+        changing anything.
+      </p>
+      <div class="masthead-meta">
+        <span><b>115</b> rules</span>
+        <span><b>8</b> scanners</span>
+        <span><b>852</b> Python tests</span>
+        <span><b>75</b> JS tests</span>
+        <span><b>0</b> runtime dependencies</span>
+      </div>
+    </header>
+
+    <section id="questions">
+      <h2>It answers three questions, not one</h2>
+      <p class="sec-note">Different mechanisms &mdash; none can substitute for another</p>
+      <p>
+        Most scanners answer only the first. The other two decide whether the first
+        one's answers matter, which is why a tool that only does pattern matching
+        produces a backlog rather than a plan.
+      </p>
+      <div class="questions">
+        <div class="q">
+          <span class="q-eyebrow">what exists</span>
+          <p class="q-ask">Is anything dangerous here?</p>
+          <p class="q-by">
+            Rule packs, a Python AST pass with taint tracking inside each function, a
+            JS pass over a comment- and string-stripped view, dependency advisories,
+            CI workflow analysis.
+          </p>
+          <span class="q-how">redassay scan</span>
+        </div>
+        <div class="q">
+          <span class="q-eyebrow">what is exposed</span>
+          <p class="q-ask">What can a stranger reach?</p>
+          <p class="q-by">
+            Every HTTP route, server action, queue consumer, socket handler and
+            webhook the engine can find &mdash; each recorded with whatever stands in
+            front of it.
+          </p>
+          <span class="q-how">redassay surface</span>
+        </div>
+        <div class="q">
+          <span class="q-eyebrow">what connects them</span>
+          <p class="q-ask">Can a request get from one to the other?</p>
+          <p class="q-by">
+            Call edges from an external graph, used to order the backlog. Findings in
+            code nothing reaches are deferred, not dismissed.
+          </p>
+          <span class="q-how">redassay trace</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="pipeline">
+      <h2>The scan pipeline</h2>
+      <p class="sec-note">Deterministic end to end &mdash; same input, same output, no model, no network</p>
+      <div class="pipeline">
+        <div class="stage">
+          <span class="stage-n">01</span>
+          <div>
+            <p class="stage-name">Walk <span class="stage-file">walker.py</span></p>
+            <p class="stage-body">
+              Honours <code>.gitignore</code> and <code>.redassayignore</code>, sniffs
+              binaries, caps file size, yields in a deterministic order so two runs
+              cannot disagree.
+            </p>
+          </div>
+        </div>
+        <div class="stage">
+          <span class="stage-n">02</span>
+          <div>
+            <p class="stage-name">Prefilter <span class="stage-file">prefilter.py</span></p>
+            <p class="stage-body">
+              Extracts the literal a regex <em>must</em> match, then asks one cheap
+              question of the whole file before matching a rule line by line. Covers
+              96% of the rule set and measures 2.3&ndash;3&times; faster, with output
+              verified byte-identical.
+            </p>
+          </div>
+        </div>
+        <div class="stage">
+          <span class="stage-n">03</span>
+          <div>
+            <p class="stage-name">Scan <span class="stage-file">scanners/</span></p>
+            <p class="stage-body">
+              Eight scanners run over the same file list. One raising an exception does
+              not stop the others &mdash; a scan that dies on a malformed file in a
+              repository you are auditing for the first time is useless.
+            </p>
+          </div>
+        </div>
+        <div class="stage">
+          <span class="stage-n">04</span>
+          <div>
+            <p class="stage-name">Triage <span class="stage-file">triage.py</span></p>
+            <p class="stage-body">
+              Deduplicates by <em>concept</em> rather than rule id, so two scanners
+              reporting the same line collapse to the better-evidenced one. Then ranks
+              by severity weighted by confidence.
+            </p>
+          </div>
+        </div>
+        <div class="stage">
+          <span class="stage-n">05</span>
+          <div>
+            <p class="stage-name">Merge <span class="stage-file">store.py</span></p>
+            <p class="stage-body">
+              Folds the result into what is already there: refreshes where a finding
+              is, never touches what a human said about it. A fix that reappears
+              reopens with a comment; one that stays gone becomes verified.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="identity">
+      <h2>Why a finding's id excludes its line number</h2>
+      <p class="sec-note">The single decision the whole store rests on</p>
+      <div class="code">
+<pre>id = sha256(rule_id <span class="c">|</span> path <span class="c">|</span> normalized_snippet)[:12]</pre>
+      </div>
+      <p>
+        Code moves. The vulnerability does not. Add twenty lines above a finding and a
+        dismissal somebody made last month must not come back &mdash; so the line
+        number is deliberately not in the hash.
+      </p>
+      <p>
+        <code>normalized_snippet</code> collapses whitespace and blanks the
+        <em>contents</em> of string literals. A hardcoded password rotating from
+        <code>hunter2</code> to <code>hunter3</code> is the same finding, and the
+        secret itself never feeds the hash &mdash; which matters because ids end up in
+        logs and CI output.
+      </p>
+      <div class="aside">
+        <span class="aside-label">The trade-off</span>
+        Two structurally identical findings on different lines of the same file
+        collide. The scanners break that tie with a salt on repeat matches. Every
+        identity scheme trades something; this one trades collision resistance for
+        surviving a refactor, because the second is what a reviewer's time is spent on.
+      </div>
+    </section>
+
+    <section id="reach">
+      <h2>Reachability, and what it refuses to claim</h2>
+      <p class="sec-note">Severity says how bad; nothing else says whether anyone can get there</p>
+      <p>
+        Two findings, same rule, same severity, same file. One is called by an
+        unauthenticated <code>POST</code>; the other is called by nothing:
+      </p>
+      <div class="code">
+<pre><span class="hit">!</span> high  py.shell-dynamic  app/db.py:7
+    reachable from POST /report in 1 hop(s): report <span class="f">-&gt;</span> run_report
+
+<span class="c">.</span> high  py.shell-dynamic  app/db.py:12
+    no call path from any known entry point</pre>
+      </div>
+      <p>
+        redassay does not build the call graph. A real interprocedural analysis needs
+        one, and a wrong answer from a half-built graph is worse than no answer &mdash;
+        it produces confident nonsense, which is the failure mode that gets tools
+        uninstalled. So <code>callgraph.py</code> is a <em>bridge</em>: it shells out
+        to an external indexer, reads its edges, and goes quiet when there is none.
+      </p>
+      <p>
+        <strong><code>.</code> never renders as &ldquo;unreachable&rdquo;.</strong> A
+        static call graph cannot see dynamic dispatch, reflection, framework
+        registration, or anything wired at runtime. The status is a statement about
+        the graph, and the output says so every single time it appears.
+      </p>
+    </section>
+
+    <section id="loop">
+      <h2>The review loop</h2>
+      <p class="sec-note">The board never edits code &mdash; it appends to a queue</p>
+      <div class="loop">
+        <div class="actor">
+          <p class="actor-who"><span class="dot dot-machine"></span>The engine and the agent</p>
+          <ul>
+            <li>Scan, map the surface, rank by reachability</li>
+            <li>Add what rules structurally cannot find &mdash; authorization gaps, logic flaws, unsafe data flow</li>
+            <li>Confirm or dismiss its own low-confidence findings, with reasons</li>
+            <li>Drain the approval queue, patch, record the diff</li>
+            <li>Rescan to verify &mdash; or report that a fix did not clear it</li>
+          </ul>
+        </div>
+        <div class="actor">
+          <p class="actor-who"><span class="dot dot-human"></span>You</p>
+          <ul>
+            <li>Read a ranked list, not a wall of markdown</li>
+            <li>Approve a fix, with a note about what it must preserve</li>
+            <li>Dismiss with a reason that survives every future scan</li>
+            <li>Comment for whoever reads this file next</li>
+            <li>Select several and approve them together</li>
+          </ul>
+        </div>
+        <div class="gate">
+          <b>Nothing edits code until you approve a specific finding.</b> The thing you
+          click and the thing that writes to disk are separate processes, and the second
+          only ever acts on what the first recorded. That separation is the point of the
+          design, not an implementation detail.
+        </div>
+      </div>
+    </section>
+
+    <section id="deliberate">
+      <h2>Limits that are decisions</h2>
+      <p class="sec-note">Written down so you can judge whether the tool fits</p>
+
+      <h3>The engine imports nothing outside the standard library</h3>
+      <p>
+        Enforced in CI. A security tool gets pointed at code you do not trust yet, often
+        on a machine you do not control, frequently with no network. Requiring
+        <code>pip install</code> &mdash; and with it a transitive dependency tree you
+        have not reviewed &mdash; undercuts the thing it is for.
+      </p>
+      <p>
+        The cost is real and paid openly: no YAML parser, no tree-sitter, no HTTP
+        client. The JavaScript analysis is regex over a normalized view rather than a
+        parse tree, the YAML reader tracks indentation and nothing else, and the
+        advisory database is an offline snapshot you refresh deliberately.
+      </p>
+
+      <h3>Confidence is a separate axis from severity</h3>
+      <div class="sev-scale">
+        <span class="sev s-crit">critical</span>
+        <span class="sev s-high">high</span>
+        <span class="sev s-med">medium</span>
+        <span class="sev s-low">low</span>
+      </div>
+      <p>
+        Severity is impact if the finding is real. Confidence is how sure the rule is
+        that it <em>is</em>. The board ranks by the two multiplied, so a speculative
+        critical sits below a verified high. Inflating confidence is how a tool teaches
+        people to skim past its output &mdash; and then the real criticals go unread too.
+      </p>
+
+      <h3>Three known misses</h3>
+      <ul class="limits">
+        <li><span class="mk">&mdash;</span><span>Taint does not cross function boundaries without an external call graph. A helper taking a tainted argument is not connected to its caller.</span></li>
+        <li><span class="mk">&mdash;</span><span>The dependency data is a snapshot. It goes stale. Pair it with a live feed for dependency coverage specifically.</span></li>
+        <li><span class="mk">&mdash;</span><span>Authorization correctness cannot be decided by a scanner at all &mdash; which is precisely why the model-driven half of the audit exists.</span></li>
+      </ul>
+    </section>
+
+    <section id="numbers">
+      <h2>What it actually does</h2>
+      <p class="sec-note">Reproducible with tools/evaluate.py and tools/benchmark.py</p>
+
+      <h3>On deliberately vulnerable applications</h3>
+      <p>
+        Every critical was opened and read. On a Django training app: SQL injection via
+        string concatenation, command injection through a shell subprocess, <code>eval()</code>
+        on a request parameter, path traversal, SSRF, pickle deserialization &mdash; all
+        found, each with the taint source named in the description rather than left for
+        the reader to re-derive.
+      </p>
+
+      <h3>On a large framework</h3>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr><th>Scope</th><th>Findings</th><th>Per kLOC</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Everything</td><td class="num">701</td><td class="num">0.72</td></tr>
+            <tr><td>Excluding tests</td><td class="num">202 at high+</td><td class="num">0.36</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <strong>59% of the findings came from the project's own test suite</strong> &mdash;
+        files that construct malicious input on purpose. Most of the rest are in the
+        ORM's schema backends and the templating helpers: a framework
+        <em>implements</em> SQL construction and HTML escaping, which are exactly the
+        primitives the rules look for.
+      </p>
+      <p>
+        The honest conclusion is that redassay is tuned for application code, not
+        framework internals. On an application that <em>uses</em> a framework, the same
+        rules fire almost exclusively on real problems.
+      </p>
+
+      <h3>The false-positive budget, written as a test</h3>
+      <p>
+        <code>fixtures/clean-app/</code> is idiomatic, safe code &mdash; the correct
+        form of everything the rules flag elsewhere. It produces exactly
+        <strong>one</strong> finding: a low-confidence note on an allowlisted fetch,
+        where the taint tracker can see a guard but cannot verify it is strict enough.
+        The suite asserts it never produces a high-confidence finding.
+      </p>
+      <div class="aside">
+        <span class="aside-label">Rules test themselves</span>
+        Every rule carries an example it must match and a counterexample it must not,
+        run against the scanner by the test suite. Adding that mechanism found
+        <strong>seven silently broken rules</strong> &mdash; including five whose
+        literal matcher could never match a quote inside a differently-quoted string,
+        so the most-used SQL rule was missing <code>WHERE name = '"</code> entirely.
+      </div>
+    </section>
+
+    <section id="commands">
+      <h2>The whole surface</h2>
+      <p class="sec-note">One CLI, used by both a human and an agent &mdash; every command takes --json</p>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr><th>Command</th><th>What it answers</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>scan</code></td><td>What is dangerous, and where</td></tr>
+            <tr><td><code>surface</code></td><td>What a stranger can reach, and what stands in front of it</td></tr>
+            <tr><td><code>trace</code></td><td>Whether a request can actually get to a finding</td></tr>
+            <tr><td><code>serve</code></td><td>The review board, on loopback</td></tr>
+            <tr><td><code>queue&nbsp;pull</code></td><td>What a human approved, with the full finding attached</td></tr>
+            <tr><td><code>resolve</code></td><td>Records a fix &mdash; pipe <code>git diff</code> in and the board shows it</td></tr>
+            <tr><td><code>dismiss</code></td><td>No, with a reason that survives every future scan</td></tr>
+            <tr><td><code>baseline</code></td><td>Freeze today so a gate fails only on what gets added</td></tr>
+            <tr><td><code>history</code></td><td>Whether this is getting better or worse</td></tr>
+            <tr><td><code>report</code></td><td>Markdown, SARIF, quickfix, exposure, or control coverage</td></tr>
+            <tr><td><code>doctor</code></td><td>Why it is not working</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        In Claude Code it is one entry point &mdash; <code>/redassay-security audit</code>
+        &mdash; which runs the loop end to end and stops at the board, because the next
+        decision is yours.
+      </p>
+    </section>
+
+    <footer>
+      redassay &middot; MIT &middot; engine is Python standard library only
+    </footer>
+
+  </main>
+</div>
