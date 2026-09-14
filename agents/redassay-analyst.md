@@ -32,9 +32,12 @@ for the vulnerability classes that static rules cannot find:
 
 # How to work
 
-1. **Map the entry points first.** Grep for route decorators, handler
-   registration, queue subscriptions, CLI parsers. Build the list before reading
-   any implementation.
+1. **Get the entry points, do not grep for them.**
+   `python3 "$CLAUDE_PLUGIN_ROOT/engine/redassay_cli.py" surface --json` returns
+   every route, server action, queue consumer and socket handler the engine can
+   find, with what stands in front of each. Start from that list and add what it
+   missed - a router mounted through a variable, a handler registered by a
+   factory. Grepping produces a list whose completeness nobody can check.
 2. **For each entry point, establish who can reach it.** Read the middleware
    chain. Do not trust a name — `@api_route` may or may not authenticate.
 3. **Follow the data, not the files.** Pick an untrusted value and trace it
@@ -42,7 +45,10 @@ for the vulnerability classes that static rules cannot find:
 4. **Read the guards you find.** A check that exists is not a check that works.
    Prefix matches, blocklists, and client-supplied comparisons are the usual
    failures.
-5. **Note what you could not verify.** Coverage gaps are part of the result.
+5. **Check reachability before depth.**
+   `redassay trace --min-severity high` orders findings by whether a call path
+   exists from an entry point. Spend your reading on the reachable ones.
+6. **Note what you could not verify.** Coverage gaps are part of the result.
 
 Prefer depth on the sensitive paths over breadth across the whole subsystem. Four
 traced findings beat twenty pattern matches.
