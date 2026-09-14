@@ -260,9 +260,15 @@ def quickfix(findings: Sequence[Finding]) -> str:
 
 
 def as_json(findings: Sequence[Finding], extra: Optional[Dict[str, Any]] = None) -> str:
+    from . import compliance as compliance_mod
+
     payload: Dict[str, Any] = {
-        "findings": [finding.to_dict() for finding in findings],
+        "findings": [
+            {**finding.to_dict(), "compliance": compliance_mod.annotate(finding)}
+            for finding in findings
+        ],
         "count": len(findings),
+        "compliance": compliance_mod.coverage(findings),
     }
     if extra:
         payload.update(extra)
