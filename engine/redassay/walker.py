@@ -22,6 +22,10 @@ DEFAULT_EXCLUDE_DIRS = {
     "htmlcov", ".gradle", ".idea", ".vscode", "vendor", "bower_components",
     ".terraform", ".serverless", "site-packages", ".redassay", ".cache",
     "Pods", "DerivedData", ".dart_tool", "elm-stuff", ".parcel-cache",
+    # Vendored CMS cores - third-party code the user did not write and cannot
+    # fix, the same category as vendor/ and node_modules/. wp-content (themes and
+    # plugins, i.e. the user's own code) is deliberately not here.
+    "wp-admin", "wp-includes",
 }
 
 DEFAULT_EXCLUDE_GLOBS = [
