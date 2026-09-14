@@ -121,6 +121,24 @@ class WalkTest(TempRepo):
         self.assertEqual(by_language["python"], 2)
 
 
+class VendoredCoreTest(TempRepo):
+    """WordPress core is third-party code the user did not write - the same
+    category as vendor/ and node_modules/."""
+
+    def test_wp_admin_and_wp_includes_are_skipped(self):
+        self.write("wp-admin/includes/ajax.php", "<?php echo 1;\n")
+        self.write("wp-includes/functions.php", "<?php echo 1;\n")
+        self.write("wp-content/themes/mine/index.php", "<?php echo 1;\n")
+        self.write("index.php", "<?php echo 1;\n")
+        paths = {f.path for f in collect(self.root)}
+        self.assertNotIn("wp-admin/includes/ajax.php", paths)
+        self.assertNotIn("wp-includes/functions.php", paths)
+
+    def test_wp_content_is_kept_because_it_is_the_users_code(self):
+        self.write("wp-content/plugins/mine/plugin.php", "<?php echo 1;\n")
+        self.assertIn("wp-content/plugins/mine/plugin.php", {f.path for f in collect(self.root)})
+
+
 class BinaryDetectionTest(TempRepo):
     def test_null_bytes_mean_binary(self):
         path = self.write("a.bin", "abc")

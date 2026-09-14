@@ -178,6 +178,30 @@ class NoiseControlTest(unittest.TestCase):
         code = '<?php $r = $_SERVER["HTTP_REFERER"]; echo $r; ?>'
         self.assertIn("php.taint-xss", rules(code))
 
+    def test_files_tmp_name_is_not_attacker_controlled(self):
+        """$_FILES[...]['tmp_name'] is the server's temp path, not the client's."""
+        code = '<?php $c = file_get_contents($_FILES["f"]["tmp_name"]); ?>'
+        self.assertNotIn("php.taint-file-read", rules(code))
+
+    def test_files_name_is_attacker_controlled(self):
+        code = '<?php readfile("/d/" . $_FILES["f"]["name"]); ?>'
+        self.assertIn("php.taint-file-read", rules(code))
+
+    def test_a_wordpress_escaper_is_recognised(self):
+        code = '<?php $n = $_POST["name"]; echo esc_html($n); ?>'
+        self.assertNotIn("php.taint-xss", rules(code))
+
+    def test_esc_url_and_esc_attr_are_recognised(self):
+        self.assertNotIn("php.taint-xss", rules('<?php echo esc_url($_GET["u"]); ?>'))
+        self.assertNotIn("php.taint-xss", rules('<?php echo esc_attr($_GET["a"]); ?>'))
+
+    def test_the_laravel_e_helper_is_recognised(self):
+        self.assertNotIn("php.taint-xss", rules('<?php echo e($_GET["x"]); ?>'))
+
+    def test_absint_coerces_to_a_number(self):
+        code = '<?php $id = absint($_GET["id"]); system("job " . $id); ?>'
+        self.assertNotIn("php.taint-command", rules(code))
+
     def test_an_inline_suppression_is_honoured(self):
         code = ('<?php $n = $_POST["name"]; // redassay: ignore php.taint-xss - trusted admin form\n'
                 'echo $n; ?>')
