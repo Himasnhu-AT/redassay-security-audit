@@ -23,6 +23,7 @@ Covering 59 distinct CWEs.
 | `exposure` | Published services: port mappings, Kubernetes Services, open CIDRs, wildcard binds |
 | `javascript` | JS/TS analysis over a comment- and string-stripped view, with request taint tracking |
 | `pattern` | Rule-pack driven source matching with negative and proximity guards |
+| `php-taint` | PHP taint tracking over a normalized view: request data through variables to sinks |
 | `python-ast` | Python AST analysis with intra-procedural taint tracking |
 | `secrets` | Hardcoded credentials: provider tokens, key material, high-entropy assignments |
 

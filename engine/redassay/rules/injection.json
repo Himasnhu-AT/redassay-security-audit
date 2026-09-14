@@ -212,7 +212,7 @@
       "languages": [
         "php"
       ],
-      "pattern": "\\b(exec|shell_exec|system|passthru|popen|proc_open)\\s*\\(\\s*[^)]*\\$",
+      "pattern": "\\b(exec|shell_exec|system|passthru|popen|proc_open)\\s*\\(\\s*[^)]*\\$_(GET|POST|REQUEST|COOKIE|SERVER|FILES)\\b",
       "description": "A PHP variable reaches a shell execution function.",
       "remediation": "Avoid shell execution. If unavoidable, use escapeshellarg() on every interpolated value.",
       "cwe": [
@@ -223,7 +223,8 @@
         "shell_exec(\"ping \" . $_GET[\"host\"]);"
       ],
       "counterexamples": [
-        "shell_exec(\"uptime\");"
+        "system(\"uptime\");",
+        "$c = intval($_GET[\"n\"]); system(\"report \" . $c);"
       ]
     },
     {

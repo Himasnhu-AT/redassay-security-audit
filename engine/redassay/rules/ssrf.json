@@ -32,10 +32,11 @@
       "nearby_window": 4,
       "description": "A request-controlled URL lets an attacker aim the server at internal services: cloud metadata endpoints, admin interfaces on localhost, or the internal network generally.",
       "remediation": "Allowlist the hosts you intend to reach, resolve the hostname and reject private/link-local addresses, and disable redirects.",
-      "not_pattern": "^\\s*(def|async def|function|export function|class)\\s|=>\\s*\\{?\\s*$|allow_redirects\\s*=\\s*False",
+      "not_pattern": "^\\s*(def|async def|function|export function|class)\\s|=>\\s*\\{?\\s*$|allow_redirects\\s*=\\s*False|basename\\s*\\(|realpath\\s*\\(",
       "examples": [
         "    return requests.get(request.args[\"url\"], timeout=5).text"
-      ]
+      ],
+      "nearby_absent": "basename\\s*\\(|realpath\\s*\\(|intval\\s*\\(|\\(int\\)"
     },
     {
       "id": "ssrf.metadata-endpoint",
