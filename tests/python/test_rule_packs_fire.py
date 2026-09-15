@@ -72,6 +72,12 @@ class FixtureLabelTest(unittest.TestCase):
             "php.taint-command", "php.taint-file-read", "php.taint-unserialize",
             "php.taint-eval", "php.taint-header", "php.taint-file-write",
             "php.taint-callable",
+            "ruby.taint-sql", "ruby.taint-command", "ruby.taint-eval",
+            "ruby.taint-template-injection", "ruby.taint-code-load",
+            "ruby.taint-deserialize", "ruby.taint-file-read",
+            "ruby.taint-open-redirect", "ruby.taint-xss",
+            "go.taint-sql", "go.taint-command", "go.taint-file-read",
+            "go.taint-ssrf", "go.taint-open-redirect", "go.taint-xss",
         }
         for fixture in ("vuln-polyglot", "vuln-flask", "vuln-node"):
             for path, rules in labelled_rules(os.path.join(FIXTURES, fixture)).items():

@@ -25,6 +25,7 @@ Covering 59 distinct CWEs.
 | `pattern` | Rule-pack driven source matching with negative and proximity guards |
 | `php-taint` | PHP taint tracking over a normalized view: request data through variables to sinks |
 | `python-ast` | Python AST analysis with intra-procedural taint tracking |
+| `ruby-taint` | Ruby taint tracking over a normalized view: request data through variables to sinks |
 | `secrets` | Hardcoded credentials: provider tokens, key material, high-entropy assignments |
 
 ## Pattern rule packs
