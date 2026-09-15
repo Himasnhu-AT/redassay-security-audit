@@ -21,6 +21,7 @@ Covering 59 distinct CWEs.
 | `configs` | Environment files, Dockerfiles, compose and Kubernetes manifests |
 | `dependencies` | Known-vulnerable dependency versions and supply-chain hygiene in manifests |
 | `exposure` | Published services: port mappings, Kubernetes Services, open CIDRs, wildcard binds |
+| `go-taint` | Go taint tracking over a normalized view: request data through variables to sinks |
 | `javascript` | JS/TS analysis over a comment- and string-stripped view, with request taint tracking |
 | `pattern` | Rule-pack driven source matching with negative and proximity guards |
 | `php-taint` | PHP taint tracking over a normalized view: request data through variables to sinks |
