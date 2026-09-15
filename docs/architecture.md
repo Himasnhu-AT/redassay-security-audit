@@ -39,7 +39,7 @@ walk -> scanners -> triage -> merge -> store
 `.redassayignore`, skips binaries by sniffing, and caps file size. Deterministic
 order, so two runs produce the same output.
 
-**scanners** (`scanners/`) each take the file list and yield findings. Seven of
+**scanners** (`scanners/`) each take the file list and yield findings. Eleven of
 them, and one raising an exception does not stop the others — a scan that dies
 on a malformed file in a repository you are auditing for the first time is
 useless.
@@ -113,6 +113,8 @@ and recognises the framework escapers (`esc_html`, `e()`) that real PHP relies
 on. File-scope taint breaks down on very large framework files, so vendored CMS
 cores are excluded at the walker rather than analyzed.
 
+Ruby and Go reuse that machinery with language-specific fronts. Ruby's propagation vector is string interpolation, so its normalizer blanks a string body but keeps the `#{...}` inside it; its sinks know that a parameterised `where("x = ?", v)` and a hash condition are safe while an interpolated query is not, and it models ERB template injection as its own sink. Go has no interpolation, so propagation is `+` concatenation and `fmt.Sprintf`; its SQL sinks read only the first argument with bracket-aware depth, so a bound parameter after a placeholder is not mistaken for the query. All four taint scanners are flow-sensitive: a variable's state at a sink is whatever was last written to it.
+
 ## The board
 
 `http.server` on loopback. No framework, no build step, no bundler — the UI is
@@ -159,13 +161,14 @@ API. Those are acknowledged limits, documented where they bite.
   cases and will miss anything spanning unusual syntax.
 - **Taint does not cross functions.** A helper that takes a tainted argument and
   reaches a sink is not connected to its caller.
-- **Taint tracking is per-language.** Python, JavaScript/TypeScript and PHP trace
-  request data through variables to a sink; Ruby, Go and Java/Kotlin have only
-  line-oriented pattern rules, so a source assigned to a variable and used at a
-  sink a line later — the shape the PHP scanner was built to catch — is missed in
-  those languages. They are the next candidates for a taint scanner, held back
-  only because the benchmark corpus is almost entirely PHP/JS/Python, so a new
-  language's precision cannot yet be measured at scale.
+- **Taint tracking is per-language.** Python, JavaScript/TypeScript, PHP, Ruby
+  and Go trace request data through variables to a sink; Java/Kotlin still have
+  only line-oriented pattern rules, so a JVM source assigned to a variable and
+  used at a sink a line later — the shape the taint scanners were built to catch
+  — is missed. The JVM is the next candidate, held back only because the
+  benchmark corpus carries little Java, so its precision cannot yet be measured
+  at scale; the Ruby and Go scanners were validated on dedicated fixtures and a
+  real corpus SSTI the pattern rules missed.
 - **The advisory database is a snapshot.** It goes stale. It is refreshed
   deliberately, and the file says when.
 - **The YAML reader tracks indentation and nothing else.** No anchors, no merge

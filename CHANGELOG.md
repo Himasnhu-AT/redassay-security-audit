@@ -22,6 +22,19 @@
   `res.end`), the one common web bug it had no rule for. Gated on the
   interpolations rather than the surrounding markup, so a tainted name cannot
   collide with the same word appearing as HTML prose.
+- **Ruby and Go taint scanners**, closing the same through-variable blind spot
+  in two more languages. Ruby traces `params`/`cookies`/`request.*` through
+  string interpolation to SQL, command (including backticks and `%x`), ERB
+  template injection, deserialization, file, redirect and `html_safe` sinks,
+  and knows the parameterised and hash query forms are safe. Go traces the
+  net/http and router accessors through `+` and `fmt.Sprintf` to SQL, command,
+  path, SSRF, redirect and response-write sinks, reading only a query's first
+  argument so bound parameters stay safe. Running the Ruby scanner over the
+  corpus surfaced a real ERB SSTI (RCE) the pattern rules had missed.
+- `go.path-join-request` now requires the request source **inside** the file
+  operation rather than merely nearby, since the go-taint scanner owns the
+  through-variable case — removing a proximity false positive on any handler
+  that both reads parameters and touches the disk.
 
 ## 0.1.0 - 2026-09-14
 
@@ -105,7 +118,7 @@ First release.
   scanner by the test suite. Introducing this found seven silently broken rules,
   including five whose literal matcher could never match a quote inside a
   differently-quoted string - so the most-used SQL rule missed `WHERE name = '"`.
-- 885 Python tests and 75 JavaScript tests, neither needing an install.
+- 962 Python tests and 75 JavaScript tests, neither needing an install.
 - A control fixture of safe code that must produce zero high-confidence
   findings, and a regression suite built from false positives that real
   repositories produced.

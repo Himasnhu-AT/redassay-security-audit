@@ -146,6 +146,34 @@ Two robustness fixes came out of running it on real code rather than fixtures:
   controlled; `['tmp_name']` is the server's own temp path, and reading it is not
   a finding.
 
+## Extending taint to Ruby and Go
+
+An audit for the same blind spot in every other language confirmed it in two:
+Ruby and Go had only line-oriented pattern rules, so `name = params[:name];
+User.where("... #{name}")` and `id := r.URL.Query().Get(); db.Query("..." + id)`
+were both invisible. Two taint scanners, built on the PHP scanner's design,
+close that.
+
+The corpus cannot validate them at scale - it holds one Ruby file and no Go -
+so validation is by dedicated fixtures (a labelled vuln sample and a safe
+control per language) and unit tests, the same discipline the control fixture
+applies. But the one Ruby file paid for itself: it is an **ERB template
+injection** (`ERB.new("#{sentence}").result(binding)` — remote code execution),
+the challenge's intended bug, which the pattern rules did not model and the new
+scanner catches. That took the corpus total from 768 to 769 - a real find, not
+a regression.
+
+The false-positive work was in telling safe query forms from unsafe ones. Ruby's
+parameterised `where("x = ?", v)` and hash `where(x: v)` conditions are safe; the
+discriminator is that injection needs the taint inside a *string*, which after
+normalization still carries its quote characters, while a hash condition does
+not. Go's bound parameters sit after the query's first argument, so its SQL sinks
+read only that first argument with bracket-aware depth — keeping a nested
+`fmt.Sprintf(...)` whole while cutting a real bind parameter. Tightening
+`go.path-join-request` to require the source *inside* the file operation, now
+that the taint scanner owns the through-variable case, removed a proximity false
+positive that had fired on any handler reading parameters near a disk read.
+
 ## The control fixture
 
 `fixtures/clean-app/` is the other half of the measurement: idiomatic, safe code

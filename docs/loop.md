@@ -49,7 +49,7 @@ into it.
 
 ### 1. The deterministic pass
 
-Seven scanners walk the tree. No model, no network, no judgement — the same
+Eleven scanners walk the tree. No model, no network, no judgement — the same
 repository produces the same findings every time. On a 250-file project this
 takes under half a second.
 

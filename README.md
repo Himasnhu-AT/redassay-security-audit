@@ -122,7 +122,7 @@ Full command reference: [`docs/cli.md`](docs/cli.md).
 
 ## What it detects
 
-115 rules across 12 packs, plus 8 scanners that do more than match text.
+115 rules across 12 packs, plus 10 scanners that do more than match text.
 
 **Injection** — SQL, command, code, template, LDAP, XPath, NoSQL operator
 injection, across Python, JS/TS, Ruby, PHP, Java, Go, C#.
@@ -212,7 +212,7 @@ engine/redassay/   the scanner - stdlib only
   scanners/        pattern, secrets, python-ast, javascript, deps, cicd, configs
   rules/           nine JSON rule packs
   server/          the board: HTTP server, JSON API, static UI
-tests/python/      885 unittest tests
+tests/python/      962 unittest tests
 tests/js/          75 node:test tests for the board's modules
 fixtures/          vulnerable apps, and one clean control app
 ```
