@@ -45,6 +45,12 @@ app.get("/search", (req, res) => {
   db.query(`SELECT * FROM items WHERE name LIKE '%${term}%'`, (err, rows) => res.json(rows));
 });
 
+app.get("/hello", (req, res) => {
+  // VULN: js.xss-tainted - request data reflected into an HTML response
+  const name = req.query.name;
+  res.send(`<h1>Hello, ${name}</h1>`);
+});
+
 // VULN: js.express-trust-proxy-all
 app.set("trust proxy", true);
 

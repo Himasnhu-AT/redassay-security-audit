@@ -90,6 +90,41 @@ class SinkTest(unittest.TestCase):
         self.assertNotIn("js.exec-tainted", rules(code))
 
 
+class ReflectedXssSinkTest(unittest.TestCase):
+    """res.send/write/end of request data is reflected XSS. The gate is the
+    interpolations, not the surrounding HTML - a tainted name like `user` must
+    not collide with the word "user" in the markup."""
+
+    def test_reflected_xss_via_concatenation(self):
+        code = 'const q = req.query.q;\nres.send("<h1>" + q + "</h1>");'
+        self.assertIn("js.xss-tainted", rules(code))
+
+    def test_reflected_xss_via_template_literal(self):
+        code = 'const name = req.query.name;\nres.send(`<h1>Hi ${name}</h1>`);'
+        self.assertIn("js.xss-tainted", rules(code))
+
+    def test_res_json_is_safe(self):
+        code = 'res.json({ q: req.query.q });'
+        self.assertNotIn("js.xss-tainted", rules(code))
+
+    def test_an_html_escaper_is_recognised(self):
+        code = 'const q = req.query.q;\nres.send("<h1>" + escapeHtml(q) + "</h1>");'
+        self.assertNotIn("js.xss-tainted", rules(code))
+
+    def test_markup_prose_is_not_mistaken_for_a_tainted_name(self):
+        # `user` is bound tainted elsewhere, but here only server data is
+        # interpolated; the word "user" in the HTML must not trigger the sink.
+        code = ('const user = req.params.id;\n'
+                'function page(t) {\n'
+                '  return res.send(`<h1>Welcome</h1><p>the user list was built at '
+                '${new Date(t).toISOString()}</p>`);\n}')
+        self.assertNotIn("js.xss-tainted", rules(code))
+
+    def test_static_response_is_silent(self):
+        code = 'res.send("<h1>static</h1>");'
+        self.assertNotIn("js.xss-tainted", rules(code))
+
+
 class StaticRuleTest(unittest.TestCase):
     def test_hardcoded_jwt_secret(self):
         self.assertIn("js.jwt-hardcoded-secret", rules('jwt.sign(payload, "my-super-secret");'))

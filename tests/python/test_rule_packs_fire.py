@@ -60,6 +60,7 @@ class FixtureLabelTest(unittest.TestCase):
             "js.redirect-tainted", "js.eval-tainted", "js.jwt-hardcoded-secret",
             "js.express-trust-proxy-all", "js.dynamic-require", "js.cookie-no-flags",
             "js.prototype-pollution-sink", "js.helmet-missing-csp", "js.set-timeout-string",
+            "js.xss-tainted",
             "ci.pull-request-target-checkout", "ci.script-injection", "ci.unpinned-action",
             "ci.permissions-write-all", "ci.secret-printed", "ci.curl-pipe-shell",
             "secret.hardcoded-assignment", "config.dockerfile-baked-secret",
