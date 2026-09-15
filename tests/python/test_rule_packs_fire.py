@@ -69,7 +69,8 @@ class FixtureLabelTest(unittest.TestCase):
             "dep.install-hook-remote-code", "dep.floating-version", "dep.non-registry-source",
             "php.taint-xss", "php.taint-file-inclusion", "php.taint-sql",
             "php.taint-command", "php.taint-file-read", "php.taint-unserialize",
-            "php.taint-eval", "php.taint-header",
+            "php.taint-eval", "php.taint-header", "php.taint-file-write",
+            "php.taint-callable",
         }
         for fixture in ("vuln-polyglot", "vuln-flask", "vuln-node"):
             for path, rules in labelled_rules(os.path.join(FIXTURES, fixture)).items():

@@ -162,6 +162,81 @@ class SinkTest(unittest.TestCase):
         self.assertEqual(finding.confidence, "high")
 
 
+class FileWriteSinkTest(unittest.TestCase):
+    """A tainted destination path is arbitrary file write (dropped webshell,
+    overwritten config, traversal) - distinct from the read sink."""
+
+    def test_file_put_contents_with_a_request_path(self):
+        code = '<?php $n = $_POST["name"]; file_put_contents("uploads/" . $n, $data); ?>'
+        self.assertIn("php.taint-file-write", rules(code))
+
+    def test_move_uploaded_file_to_a_request_destination(self):
+        code = ('<?php $dest = "uploads/" . $_FILES["f"]["name"];'
+                ' move_uploaded_file($_FILES["f"]["tmp_name"], $dest); ?>')
+        self.assertIn("php.taint-file-write", rules(code))
+
+    def test_copy_to_a_request_destination(self):
+        code = '<?php $d = $_GET["to"]; copy($src, $d); ?>'
+        self.assertIn("php.taint-file-write", rules(code))
+
+    def test_a_basename_destination_is_confined(self):
+        code = '<?php $n = basename($_POST["name"]); file_put_contents("uploads/" . $n, $data); ?>'
+        self.assertNotIn("php.taint-file-write", rules(code))
+
+    def test_user_data_written_to_a_fixed_log_is_not_a_path_write(self):
+        # Only the first argument (the path) is matched; tainted *content* to a
+        # constant path is a different, lower concern and not this rule.
+        code = '<?php file_put_contents("/var/log/app.log", $_POST["msg"]); ?>'
+        self.assertNotIn("php.taint-file-write", rules(code))
+
+
+class CallableSinkTest(unittest.TestCase):
+    """A tainted callable is arbitrary code execution."""
+
+    def test_call_user_func_with_a_request_name(self):
+        code = '<?php $fn = $_REQUEST["fn"]; call_user_func($fn); ?>'
+        self.assertIn("php.taint-callable", rules(code))
+
+    def test_a_variable_function_call(self):
+        code = '<?php $cb = $_GET["cb"]; $cb($arg); ?>'
+        self.assertIn("php.taint-callable", rules(code))
+
+    def test_a_constant_callback_is_silent(self):
+        code = '<?php $cb = "strtoupper"; echo $cb($name); ?>'
+        self.assertNotIn("php.taint-callable", rules(code))
+
+
+class FlowSensitivityTest(unittest.TestCase):
+    """A variable's taint is whatever was last written to it before the sink.
+    File-scoped taint over-approximates on big framework files where a name like
+    $file is reused for a constant path and a request value both; the nearest
+    assignment must win, or every write in the file is flagged."""
+
+    def test_a_constant_reassignment_kills_taint(self):
+        code = ('<?php $file = $_GET["f"];\n'
+                '$file = "/etc/app/.config";\n'
+                'file_put_contents($file, $data); ?>')
+        self.assertNotIn("php.taint-file-write", rules(code))
+
+    def test_taint_after_the_reassignment_still_fires(self):
+        code = ('<?php $file = "/etc/app/.config";\n'
+                '$file = $_GET["f"];\n'
+                'file_put_contents($file, $data); ?>')
+        self.assertIn("php.taint-file-write", rules(code))
+
+    def test_a_sink_between_two_writes_sees_the_earlier_one(self):
+        code = ('<?php $x = $_GET["a"];\n'
+                'echo $x;\n'
+                '$x = "safe"; ?>')
+        self.assertIn("php.taint-xss", rules(code))
+
+    def test_append_keeps_taint(self):
+        code = ('<?php $q = $_GET["q"];\n'
+                '$q .= " suffix";\n'
+                'echo $q; ?>')
+        self.assertIn("php.taint-xss", rules(code))
+
+
 class NoiseControlTest(unittest.TestCase):
     def test_an_echo_of_a_non_request_variable_is_silent(self):
         code = '<?php $title = $post->title; echo $title; ?>'

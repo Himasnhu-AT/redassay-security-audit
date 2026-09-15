@@ -23,3 +23,11 @@ $data = file_get_contents("/var/data/" . $_GET["file"]);
 
 // VULN: php.taint-unserialize
 $state = unserialize($_COOKIE["state"]);
+
+// VULN: php.taint-file-write - client filename becomes the write destination
+$dest = "uploads/" . $_FILES["article"]["name"];
+move_uploaded_file($_FILES["article"]["tmp_name"], $dest);
+
+// VULN: php.taint-callable - request chooses which function runs
+$action = $_REQUEST["action"];
+call_user_func($action);
