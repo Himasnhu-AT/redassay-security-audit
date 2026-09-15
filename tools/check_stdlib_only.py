@@ -18,7 +18,10 @@ from typing import List, Set, Tuple
 ENGINE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "engine")
 
 # Python 3.10+ has sys.stdlib_module_names; 3.9 does not, so carry a list for it.
+# `__future__` is in sys.stdlib_module_names on 3.10+, so it must be here too, or
+# every `from __future__ import annotations` reads as a dependency on 3.9.
 FALLBACK_STDLIB = {
+    "__future__",
     "abc", "argparse", "ast", "base64", "binascii", "bisect", "builtins", "calendar",
     "cgi", "cmd", "codecs", "collections", "configparser", "contextlib", "copy",
     "csv", "ctypes", "dataclasses", "datetime", "decimal", "difflib", "dis",
