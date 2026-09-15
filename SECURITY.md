@@ -37,6 +37,11 @@ The scanner reads files and never executes them. It makes no network requests -
 the dependency advisory database is an offline snapshot, which is also why it
 goes stale and why the documentation says to pair redassay with a live feed.
 
+Optional, opt-in telemetry is the one exception, and it lives in the CLI, not
+the engine: after `redassay telemetry on`, each scan sends a random local id,
+the event name and the version, and nothing that identifies you or your code.
+It is off by default and documented in [docs/telemetry.md](docs/telemetry.md).
+
 Findings are written to `.redassay/` inside the repository. Secret values are
 redacted before they reach a snippet, an id, or a log line, because ids end up
 in CI output.

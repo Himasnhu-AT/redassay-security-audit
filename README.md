@@ -215,7 +215,7 @@ engine/redassay/   the scanner - stdlib only
   scanners/        pattern, secrets, python-ast, javascript, php, ruby, go, deps, cicd, configs, exposure
   rules/           12 JSON rule packs
   server/          the board: HTTP server, JSON API, static UI
-tests/python/      962 unittest tests
+tests/python/      972 unittest tests
 tests/js/          75 node:test tests for the board's modules
 fixtures/          vulnerable apps, and one clean control app
 ```

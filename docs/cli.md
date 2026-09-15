@@ -377,6 +377,28 @@ trip.
 
 Exits 2 if a blocking problem is found.
 
+### `telemetry`
+
+```bash
+redassay telemetry            # or: telemetry status
+redassay telemetry on
+redassay telemetry off
+```
+
+Anonymous, opt-in usage telemetry, off by default. `status` prints the current
+state, where the config lives, the endpoint, and the exact payload a scan would
+send. `on` and `off` toggle it.
+
+When enabled, each `scan` sends one fire-and-forget event — a random local id,
+the event name, the version, the coarse OS, and whether it ran in CI — and
+nothing else: no path, repository name, code, or finding ever leaves the machine.
+The scan engine itself never touches the network; the ping lives in the CLI and
+only fires after you turn it on.
+
+`DO_NOT_TRACK=1` and `REDASSAY_TELEMETRY=0` force it off; `REDASSAY_TELEMETRY=1`
+forces it on; CI runs are off unless forced on. `REDASSAY_TELEMETRY_ENDPOINT`
+overrides where the event goes. Full detail in [`telemetry.md`](telemetry.md).
+
 ### `watch`
 
 ```bash

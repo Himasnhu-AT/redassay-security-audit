@@ -14,7 +14,7 @@ import re
 import sys
 from typing import Any, Dict, List, Optional, Sequence
 
-from . import __version__, config as config_mod, engine, models, queue as queue_mod
+from . import __version__, config as config_mod, engine, models, queue as queue_mod, telemetry
 from . import report as report_mod, sarif as sarif_mod, severity as sev, triage as triage_mod
 from .models import Finding, Fix, Location
 from .store import Store
@@ -117,6 +117,13 @@ def cmd_scan(args: argparse.Namespace) -> int:
     )
     quiet = args.json or args.quiet
 
+    # A one-time notice on the first *interactive* run. Gated on a TTY so scripted
+    # runs, CI, the demo and --json output stay clean and side-effect free.
+    if sys.stderr.isatty():
+        notice = telemetry.maybe_first_run_notice()
+        if notice:
+            _err(notice)
+
     def progress(event: str, data: Dict[str, Any]) -> None:
         if quiet:
             return
@@ -160,6 +167,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
             for error in result.errors:
                 _err(f"scanner error: {error}")
         _out(f"\nReview them:  redassay serve --root {config.root}")
+
+    telemetry.ping("scan")                  # opt-in, anonymous, fire-and-forget
 
     if args.fail_on:
         return engine.exit_code(result, args.fail_on)
@@ -473,6 +482,19 @@ def cmd_serve(args: argparse.Namespace) -> int:
     from .server.app import serve
     config = config_mod.load(args.root, host=args.host, port=args.port)
     return serve(config, open_browser=not args.no_browser, once=args.once)
+
+
+def cmd_telemetry(args: argparse.Namespace) -> int:
+    action = getattr(args, "telemetry_action", "status") or "status"
+    if action == "on":
+        telemetry.set_enabled(True)
+        _out("telemetry: on  (anonymous pings enabled)")
+    elif action == "off":
+        telemetry.set_enabled(False)
+        _out("telemetry: off")
+    else:
+        _out(telemetry.status_text())
+    return EXIT_OK
 
 
 def cmd_scanners(args: argparse.Namespace) -> int:
@@ -1113,6 +1135,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("scanners", help="list available scanners", parents=[common])
     p.set_defaults(func=cmd_scanners)
+
+    p = sub.add_parser("telemetry", help="anonymous, opt-in usage telemetry (off by default)",
+                       parents=[common])
+    p.add_argument("telemetry_action", nargs="?", choices=["status", "on", "off"],
+                   default="status", help="show state, or turn pings on/off")
+    p.set_defaults(func=cmd_telemetry)
 
     p = sub.add_parser("rules", help="list loaded rules", parents=[common])
     p.add_argument("--pack", default=None)

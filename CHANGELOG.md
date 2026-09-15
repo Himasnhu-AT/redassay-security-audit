@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Opt-in telemetry
+
+- An anonymous, opt-in usage ping, off by default and living in the CLI so the
+  scan engine stays network-free. When enabled with `redassay telemetry on`,
+  each scan sends a random local id, the event name, the version, the coarse OS
+  and a CI flag - no path, repository name, code or finding. `DO_NOT_TRACK`,
+  `REDASSAY_TELEMETRY` and CI detection all gate it; the send is fire-and-forget
+  and cannot slow or fail a scan. See [docs/telemetry.md](docs/telemetry.md).
+
 ### Deeper taint coverage
 
 - A PHP taint scanner: request data (`$_GET`/`$_POST`/`$_REQUEST`/`$_COOKIE`/
@@ -118,7 +127,7 @@ First release.
   scanner by the test suite. Introducing this found seven silently broken rules,
   including five whose literal matcher could never match a quote inside a
   differently-quoted string - so the most-used SQL rule missed `WHERE name = '"`.
-- 962 Python tests and 75 JavaScript tests, neither needing an install.
+- 972 Python tests and 75 JavaScript tests, neither needing an install.
 - A control fixture of safe code that must produce zero high-confidence
   findings, and a regression suite built from false positives that real
   repositories produced.
