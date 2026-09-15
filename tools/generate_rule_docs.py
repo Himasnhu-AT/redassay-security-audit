@@ -23,9 +23,22 @@ from redassay import severity as sev            # noqa: E402
 from redassay.rules import load_all             # noqa: E402
 from redassay.scanners.python_ast import RULES as AST_RULES   # noqa: E402
 from redassay.scanners.javascript import SINKS, STATIC_RULES  # noqa: E402
+from redassay.scanners.php import SINKS as PHP_SINKS          # noqa: E402
 from redassay.scanners.registry import describe  # noqa: E402
 
 TARGET = os.path.join(ROOT, "docs", "rules.md")
+
+
+def _unique_php():
+    """PHP sinks, one row per rule id (some ids have several patterns)."""
+    seen = set()
+    rows = []
+    for rule_id, category, pattern, meta in PHP_SINKS:
+        if rule_id in seen:
+            continue
+        seen.add(rule_id)
+        rows.append((rule_id, category, pattern, meta))
+    return rows
 
 PACK_BLURBS = {
     "injection": "Untrusted data reaching an interpreter: SQL, shells, the language itself, templates, LDAP, XPath, NoSQL.",
@@ -59,8 +72,9 @@ def render() -> str:
     out.append("")
     out.append(
         f"{len(rules)} pattern rules across {len(by_pack)} packs, plus "
-        f"{len(AST_RULES)} Python AST rules and {len(SINKS) + len(STATIC_RULES)} "
-        "JavaScript rules that need more than a pattern match."
+        f"{len(AST_RULES)} Python AST rules, {len(SINKS) + len(STATIC_RULES)} "
+        f"JavaScript rules, and {len(_unique_php())} PHP taint sinks that need "
+        "more than a pattern match."
     )
     out.append("")
     out.append("| Severity | Rules |")
@@ -131,6 +145,22 @@ def render() -> str:
         out.append(f"| `{rule_id}` | {meta['severity']} | taint sink |")
     for rule_id, _pattern, meta in STATIC_RULES:
         out.append(f"| `{rule_id}` | {meta['severity']} | static |")
+    out.append("")
+
+    out.append("## PHP rules")
+    out.append("")
+    out.append(
+        "The PHP taint scanner traces request data (`$_GET`, `$_POST`, "
+        "`$_REQUEST`, `$_COOKIE`, `$_FILES`, request-derived `$_SERVER` keys, "
+        "`php://input`) through variables to a sink, over a template-aware "
+        "normalized view. A finding means a concrete assignment-to-sink path, "
+        "not a pattern hit."
+    )
+    out.append("")
+    out.append("| Rule | Severity | Kind |")
+    out.append("| --- | --- | --- |")
+    for rule_id, _category, _pattern, meta in _unique_php():
+        out.append(f"| `{rule_id}` | {meta['severity']} | taint sink |")
     out.append("")
 
     out.append("## Suppressing a rule")
