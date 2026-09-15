@@ -121,6 +121,7 @@ EQUIVALENT = {
 
     "php.taint-xss": "xss-reflected",
     "xss.php-echo-request": "xss-reflected",
+    "js.xss-tainted": "xss-reflected",
 
     "php.taint-unserialize": "unsafe-php-deser",
     "deser.php-unserialize": "unsafe-php-deser",

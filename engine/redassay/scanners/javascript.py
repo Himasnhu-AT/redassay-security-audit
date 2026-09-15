@@ -81,6 +81,24 @@ def collect_tainted(text: str) -> Dict[str, str]:
     return tainted
 
 
+#: A backtick literal, terminated or not: the sink pattern captures only up to
+#: the first `)`, which can fall inside the template and leave it open, so an
+#: unterminated backtick must still blank its prose to end-of-fragment.
+_TEMPLATE_LITERAL = re.compile(r"`(?:\\.|[^`\\])*(?:`|$)", re.DOTALL)
+
+
+def template_code_only(fragment: str) -> str:
+    """Blank the literal text of a template literal, keeping only its `${...}`
+    interpolations. `_STRING` blanks '...'/"..." bodies but not backticks, so a
+    tainted variable named `user` would otherwise collide with the word "user"
+    in HTML prose. Only the interpolations carry request data; the markup around
+    them is inert text."""
+    def repl(match: re.Match) -> str:
+        interps = "".join(re.findall(r"\$\{[^}]*\}", match.group(0)))
+        return " " + interps + " "
+    return _TEMPLATE_LITERAL.sub(repl, fragment)
+
+
 def taint_in(fragment: str, tainted: Dict[str, str]) -> Optional[str]:
     if REQ_SOURCE.search(fragment):
         match = REQ_SOURCE.search(fragment)
@@ -131,6 +149,18 @@ SINKS: List[Tuple[str, str, Dict[str, Any]]] = [
         "severity": "medium", "confidence": "high", "cwe": ["CWE-601"],
         "owasp": ["A01:2021 Broken Access Control"],
         "remediation": "Allow only relative paths, or match against a fixed list of destinations.",
+    }),
+    ("js.xss-tainted", r"\bres(?:ponse)?\s*\.\s*(send|write|end)\s*\(([^)]{0,300})", {
+        "title": "Request data written to the response without escaping",
+        "severity": "high", "confidence": "medium", "cwe": ["CWE-79"],
+        "owasp": ["A03:2021 Injection"],
+        "remediation": "Escape the value for HTML (e.g. escape-html) before sending, or return it as "
+                       "JSON with res.json(); set a Content-Type that is not text/html for plain text.",
+        # res.json() escapes; an explicit HTML escaper or a non-HTML payload is safe.
+        "safe_pattern": r"escape|sanitize|DOMPurify|encodeURI|JSON\s*\.\s*stringify"
+                        r"|res(?:ponse)?\s*\.\s*json|escapeHtml|he\s*\.\s*encode|xss\s*\(|_\.escape",
+        # Gate on the interpolations, not the surrounding markup.
+        "arg_scope": True,
     }),
 ]
 
@@ -235,9 +265,17 @@ class JavaScriptScanner(Scanner):
                 fragment = match.group(0)
                 line_no = clean.count("\n", 0, match.start()) + 1
                 raw_fragment = _raw_window(raw_lines, line_no)
-                origin = taint_in(raw_fragment, tainted)
+                if meta.get("arg_scope"):
+                    # Gate on the sink argument itself, with template-literal prose
+                    # blanked, so HTML text cannot masquerade as a tainted name.
+                    origin = taint_in(template_code_only(match.group(0)), tainted)
+                else:
+                    origin = taint_in(raw_fragment, tainted)
                 if origin is None:
                     continue
+                safe = meta.get("safe_pattern")
+                if safe and re.search(safe, raw_fragment):
+                    continue          # an escaper/serialiser neutralises this sink
                 description = (
                     f"A value from `{origin}` reaches `{match.group(1)}` here. "
                     "The binding was traced from its assignment in this file."
