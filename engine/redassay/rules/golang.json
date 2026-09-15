@@ -122,8 +122,7 @@
       "title": "File path built from request data",
       "severity": "high",
       "confidence": "medium",
-      "pattern": "(filepath\\.Join|os\\.Open|os\\.ReadFile|ioutil\\.ReadFile|http\\.ServeFile)\\s*\\(",
-      "nearby": "r\\.URL\\.Query\\(\\)|mux\\.Vars|c\\.Param|r\\.FormValue|r\\.PostFormValue",
+      "pattern": "(?:filepath\\.Join|os\\.Open|os\\.OpenFile|os\\.ReadFile|ioutil\\.ReadFile|http\\.ServeFile)\\s*\\([^)]*(?:r\\.URL\\.Query\\(\\)|mux\\.Vars|c\\.Param|c\\.Query|r\\.FormValue|r\\.PostFormValue)",
       "nearby_window": 3,
       "not_pattern": "filepath\\.Clean|http\\.Dir",
       "description": "filepath.Join cleans the path but does not confine it: a leading ../ still escapes the base directory.",
@@ -136,6 +135,9 @@
       ],
       "examples": [
         "data, err := os.ReadFile(filepath.Join(base, r.URL.Query().Get(\"f\")))"
+      ],
+      "counterexamples": [
+        "name := filepath.Base(r.URL.Query().Get(\"f\")); data, err := os.ReadFile(\"/srv/\" + name)"
       ]
     },
     {
