@@ -59,5 +59,5 @@ def _load_builtin() -> None:
         return
     _loaded = True
     from . import (  # noqa: F401
-        pattern, secrets, python_ast, javascript, deps, configs, cicd, exposure, php,
+        pattern, secrets, python_ast, javascript, deps, configs, cicd, exposure, php, ruby,
     )
