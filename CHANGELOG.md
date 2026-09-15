@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Deeper taint coverage
+
+- A PHP taint scanner: request data (`$_GET`/`$_POST`/`$_REQUEST`/`$_COOKIE`/
+  `$_FILES`, request-derived `$_SERVER` keys, `php://input`) traced through
+  variables to a sink over a template-aware normalized view. Built after a
+  head-to-head against a manual reviewer showed the line-oriented PHP rules
+  could not see a source that reaches a sink one variable-hop later.
+- An audit of that scanner for the same blind spot in other shapes added two
+  sink classes it did not model: **file write to a request-built path**
+  (`file_put_contents`/`move_uploaded_file`/`copy`/`rename` — a dropped
+  webshell or traversal) and a **dynamic callable** (`call_user_func` / `$var()`
+  — arbitrary code execution).
+- PHP taint is now **flow-sensitive**: a variable's state at a sink is whatever
+  was last written to it, so a reassignment to a constant clears earlier taint.
+  This removed false positives on large framework files where one name is reused
+  for a constant path and a request value.
+- A **reflected-XSS** sink for the JavaScript scanner (`res.send`/`res.write`/
+  `res.end`), the one common web bug it had no rule for. Gated on the
+  interpolations rather than the surrounding markup, so a tainted name cannot
+  collide with the same word appearing as HTML prose.
+
 ## 0.1.0 - 2026-09-14
 
 First release.

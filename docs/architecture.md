@@ -159,6 +159,13 @@ API. Those are acknowledged limits, documented where they bite.
   cases and will miss anything spanning unusual syntax.
 - **Taint does not cross functions.** A helper that takes a tainted argument and
   reaches a sink is not connected to its caller.
+- **Taint tracking is per-language.** Python, JavaScript/TypeScript and PHP trace
+  request data through variables to a sink; Ruby, Go and Java/Kotlin have only
+  line-oriented pattern rules, so a source assigned to a variable and used at a
+  sink a line later — the shape the PHP scanner was built to catch — is missed in
+  those languages. They are the next candidates for a taint scanner, held back
+  only because the benchmark corpus is almost entirely PHP/JS/Python, so a new
+  language's precision cannot yet be measured at scale.
 - **The advisory database is a snapshot.** It goes stale. It is refreshed
   deliberately, and the file says when.
 - **The YAML reader tracks indentation and nothing else.** No anchors, no merge
