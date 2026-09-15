@@ -1,7 +1,7 @@
 {
   "name": "redassay",
   "owner": {
-    "name": "Himanshu"
+    "name": "RedAssay"
   },
   "metadata": {
     "description": "Security audit loop for Claude Code: deterministic scanning, a local triage board, and fixes applied only where you approve them.",
@@ -14,9 +14,9 @@
       "description": "Scan a codebase for vulnerabilities, review the findings on a local board, and let Claude apply the fixes you approve. Zero runtime dependencies.",
       "version": "0.1.0",
       "author": {
-        "name": "Himanshu"
+        "name": "RedAssay"
       },
-      "license": "MIT",
+      "license": "BSD-3-Clause",
       "keywords": [
         "security",
         "sast",

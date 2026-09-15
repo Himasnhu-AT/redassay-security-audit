@@ -1,0 +1,36 @@
+name: pr-hygiene
+
+# Enforces the repository rule that every pull request is tied to an issue.
+# Pure bash over the event payload, so it takes no action dependency - matching
+# the engine's own no-dependency stance.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  linked-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: A closing keyword must reference an issue
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          text="$TITLE
+          $BODY"
+          # Accept: Closes #12, Fixes #12, Resolves #12 (GitHub's own linking
+          # keywords), case-insensitive. A cross-repo reference (owner/repo#12)
+          # counts too.
+          if printf '%s' "$text" | grep -iqE '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#[0-9]+'; then
+            echo "Linked issue found."
+          else
+            echo "::error::This pull request does not reference an issue."
+            echo "Add a closing keyword to the description, e.g. 'Closes #123'."
+            echo "Every pull request closes an issue - open one first if it does not exist."
+            exit 1
+          fi

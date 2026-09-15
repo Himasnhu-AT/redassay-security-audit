@@ -35,9 +35,12 @@ approval queue, writes the patches, and marks findings resolved.
 ## Install
 
 ```
-/plugin marketplace add <this repo>
+/plugin marketplace add RedAssay/security-audit-skill
 /plugin install redassay-security
 ```
+
+Once it clears the community directory, `/plugin marketplace add
+anthropics/claude-plugins-community` will reach it too.
 
 No `pip install`, no `npm install`. The engine is Python standard library only —
 deliberately, because a security tool that needs you to install forty packages
@@ -209,8 +212,8 @@ commands/          the /redassay-security slash command
 skills/            audit method, remediation method, triage loop
 agents/            redassay-analyst, redassay-fixer
 engine/redassay/   the scanner - stdlib only
-  scanners/        pattern, secrets, python-ast, javascript, deps, cicd, configs
-  rules/           nine JSON rule packs
+  scanners/        pattern, secrets, python-ast, javascript, php, ruby, go, deps, cicd, configs, exposure
+  rules/           12 JSON rule packs
   server/          the board: HTTP server, JSON API, static UI
 tests/python/      962 unittest tests
 tests/js/          75 node:test tests for the board's modules
@@ -246,6 +249,19 @@ bash scripts/check.sh          # everything CI runs: linters, tests, demo, fixtu
 
 No installation. Python via `unittest`, JavaScript via `node:test`.
 
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for the rules the project holds itself
+to, then [`docs/writing-rules.md`](docs/writing-rules.md) if you are adding
+detection. Every pull request closes an issue and needs a green
+[`scripts/check.sh`](scripts/check.sh); a workflow enforces the issue link and
+CODEOWNERS gates the merge.
+
+- Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+- Reporting a vulnerability: [`SECURITY.md`](SECURITY.md)
+- What changed and when: [`CHANGELOG.md`](CHANGELOG.md)
+- How to cite it: [`CITATION.cff`](CITATION.cff)
+
 ## License
 
-MIT.
+BSD 3-Clause. See [`LICENSE`](LICENSE).

@@ -1,0 +1,4 @@
+# Every change is owned by the maintainer. This makes @Himasnhu-AT a required
+# reviewer on any pull request when "require review from Code Owners" is on for
+# the branch, which is how merges stay gated on one person.
+*       @Himasnhu-AT

@@ -4,7 +4,7 @@
   "description": "Security audit loop for Claude Code: scan, triage on a local board, apply approved fixes.",
   "private": true,
   "type": "module",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "scripts": {
     "test": "node --test tests/js/*.test.js",
     "test:py": "python3 -m unittest discover -s tests/python -t . -p 'test_*.py'",

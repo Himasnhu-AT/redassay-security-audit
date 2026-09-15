@@ -1,0 +1,25 @@
+name: Feature or rule request
+description: A new rule, scanner, language, or capability.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What can you not catch or do today? A concrete example of the code or workflow helps.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: The rule, sink, source, or command you want. Rough is fine.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Fits the constraints
+      options:
+        - label: This does not require the engine to take a runtime dependency (stdlib only)
+        - label: I can supply an example it must catch and a counterexample it must not

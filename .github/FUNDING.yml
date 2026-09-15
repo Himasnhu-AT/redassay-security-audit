@@ -1,0 +1,10 @@
+# GitHub reads this file to show the "Sponsor" button on the repository.
+# A slug that does not exist yet renders a broken link, so each line stays
+# commented until its page is live. Uncomment as you create each one.
+
+# github: [RedAssay]             # requires GitHub Sponsors enabled on the org
+# open_collective: redassay      # the slug at https://opencollective.com/<slug>
+# ko_fi: <username>              # https://ko-fi.com/<username>
+# liberapay: <username>          # https://liberapay.com/<username>
+# polar: RedAssay                # https://polar.sh/<org>
+# custom: ["https://redassay.com"]

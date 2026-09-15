@@ -1,0 +1,43 @@
+name: Bug report
+description: A rule fires when it should not, misses what it should catch, or the tool errors out.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A false positive and a false negative are both bugs here. If you can, include the
+        smallest file that reproduces it.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What the tool did, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproducer
+      description: The command you ran and, if you can, a minimal file that triggers it.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `python3 engine/redassay_cli.py --version`, or the commit SHA.
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - False positive (flagged safe code)
+        - False negative (missed a real issue)
+        - Crash or error
+        - Wrong metadata (severity, CWE, remediation)
+        - Something else
+    validations:
+      required: true

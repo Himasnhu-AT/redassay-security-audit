@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: redassay
+message: If you use this software, please cite it using these metadata.
+type: software
+authors:
+  - name: "RedAssay"
+repository-code: "https://github.com/RedAssay/security-audit-skill"
+abstract: >-
+  A deterministic security audit loop for Claude Code. A standard-library-only
+  engine scans a codebase, a durable findings repository survives re-scans and
+  code motion, and a local review board keeps a human between every finding and
+  the fix that gets applied.
+keywords:
+  - security
+  - static-analysis
+  - sast
+  - taint-analysis
+  - claude-code
+  - vulnerability-scanner
+license: BSD-3-Clause
+version: 0.1.0
+date-released: "2026-09-14"
