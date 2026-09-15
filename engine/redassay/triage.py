@@ -23,6 +23,8 @@ SCANNER_PRECEDENCE = {
     "python-ast": 100,
     "javascript": 90,
     "php-taint": 88,
+    "ruby-taint": 87,
+    "go-taint": 86,
     "dependencies": 85,
     "cicd": 80,
     "secrets": 75,
@@ -125,6 +127,28 @@ EQUIVALENT = {
 
     "php.taint-unserialize": "unsafe-php-deser",
     "deser.php-unserialize": "unsafe-php-deser",
+
+    # Ruby taint sinks share concepts with the coarse Ruby pattern rules; the
+    # taint scanner (precedence 87) wins at a shared line because it proves a
+    # data path rather than matching a keyword.
+    "ruby.taint-sql": "sql-injection",
+    "ruby.taint-command": "command-injection",
+    "ruby.taint-eval": "dynamic-eval",
+    "ruby.taint-template-injection": "dynamic-eval",
+    "ruby.taint-code-load": "dynamic-eval",
+    "ruby.constantize-input": "dynamic-eval",
+    "ruby.taint-deserialize": "unsafe-deser",
+    "ruby.taint-file-read": "path-traversal",
+    "ruby.taint-open-redirect": "open-redirect",
+    "ruby.taint-xss": "xss-reflected",
+
+    # Go taint sinks.
+    "go.taint-sql": "sql-injection",
+    "go.taint-command": "command-injection",
+    "go.taint-file-read": "path-traversal",
+    "go.taint-ssrf": "ssrf",
+    "go.taint-open-redirect": "open-redirect",
+    "go.taint-xss": "xss-reflected",
 
     "api.mass-assignment-spread": "mass-assignment",
     "ruby.mass-assignment": "mass-assignment",
